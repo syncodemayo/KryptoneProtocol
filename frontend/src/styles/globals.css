@@ -1,0 +1,130 @@
+@import '@solana/wallet-adapter-react-ui/styles.css';
+
+/* NUCLEAR OPTION: Force ALL Solana wallet buttons to be BLACK */
+button[class*="wallet-adapter"],
+.wallet-adapter-button,
+.wallet-adapter-button-trigger,
+[class*="wallet-adapter-button"],
+button[data-testid*="wallet"],
+button:has(span:contains("Connect")),
+button:has(span:contains("Wallet")) {
+  background: #000000 !important;
+  background-color: #000000 !important;
+  background-image: none !important;
+  color: white !important;
+  border: 1px solid #333333 !important;
+  border-color: #333333 !important;
+}
+
+button[class*="wallet-adapter"]:hover,
+.wallet-adapter-button:hover,
+.wallet-adapter-button-trigger:hover,
+[class*="wallet-adapter-button"]:hover,
+button[data-testid*="wallet"]:hover,
+button:has(span:contains("Connect")):hover,
+button:has(span:contains("Wallet")):hover {
+  background: #333333 !important;
+  background-color: #333333 !important;
+  background-image: none !important;
+  color: white !important;
+  border-color: #555555 !important;
+}
+
+/* Kill any gradients or pseudo-elements */
+button[class*="wallet-adapter"]::before,
+button[class*="wallet-adapter"]::after,
+.wallet-adapter-button::before,
+.wallet-adapter-button::after {
+  display: none !important;
+  content: none !important;
+}
+
+/* Force all child elements to be white */
+button[class*="wallet-adapter"] *,
+.wallet-adapter-button *,
+.wallet-adapter-button-trigger * {
+  color: white !important;
+  fill: white !important;
+}
+
+/* Global black, white, and silver theme overrides */
+/* Remove all colored accents and force monochrome */
+.bg-blue-50 { @apply bg-gray-50; }
+.bg-blue-100 { @apply bg-gray-100; }
+.bg-blue-600 { @apply bg-black; }
+.bg-blue-700 { @apply bg-gray-900; }
+.bg-teal-50 { @apply bg-gray-50; }
+.bg-teal-100 { @apply bg-gray-100; }
+.bg-green-50 { @apply bg-gray-100; }
+.bg-green-100 { @apply bg-gray-200; }
+.bg-red-50 { @apply bg-gray-100; }
+.bg-red-100 { @apply bg-gray-200; }
+.bg-yellow-50 { @apply bg-gray-100; }
+.bg-orange-50 { @apply bg-gray-100; }
+
+.text-blue-600 { @apply text-black; }
+.text-blue-700 { @apply text-black; }
+.text-teal-600 { @apply text-black; }
+.text-green-600 { @apply text-black; }
+.text-green-800 { @apply text-gray-900; }
+.text-red-600 { @apply text-gray-800; }
+.text-red-800 { @apply text-gray-900; }
+.text-orange-600 { @apply text-gray-800; }
+.text-orange-700 { @apply text-gray-900; }
+.text-orange-800 { @apply text-gray-900; }
+
+.border-blue-200 { @apply border-gray-200; }
+.border-teal-300 { @apply border-gray-300; }
+.border-green-200 { @apply border-gray-200; }
+.border-red-200 { @apply border-gray-200; }
+.border-orange-200 { @apply border-gray-200; }
+
+/* Status color overrides - use matte silver tones */
+.bg-green-500 { @apply bg-gray-400; }
+.bg-red-500 { @apply bg-gray-600; }
+.bg-yellow-500 { @apply bg-gray-300; }
+
+/* Ensure consistent black, white, and silver styling */
+.wise-card {
+  @apply bg-white border-gray-200 text-black shadow-sm;
+}
+
+.wise-button {
+  @apply bg-black text-white border-black hover:bg-gray-900 transition-all duration-200;
+}
+
+.wise-button-silver {
+  @apply bg-gray-300 text-gray-900 border-gray-400 hover:bg-gray-400 hover:shadow-md transition-all duration-200;
+}
+
+.wise-button-silver:hover {
+  background: linear-gradient(145deg, #ffffff 0%, #f1f3f4 50%, #e8eaed 100%);
+  @apply shadow-lg;
+}
+
+.banking-card {
+  @apply bg-white border-gray-200 shadow-sm hover:shadow-md transition-all duration-300;
+}
+
+/* Matte accent elements */
+.silver-nav {
+  @apply bg-gray-100 border-b border-gray-300;
+}
+
+.silver-sidebar {
+  @apply bg-gray-200 border-r border-gray-300;
+}
+
+/* Matte input fields */
+.silver-input {
+  @apply bg-white border-gray-300 text-gray-900 focus:border-gray-400 focus:ring-gray-300;
+}
+
+/* Dialog and modal styling */
+.dialog-overlay {
+  @apply bg-black/50 backdrop-blur-sm;
+}
+
+.dialog-content {
+  @apply bg-white border-gray-200 shadow-2xl;
+}
