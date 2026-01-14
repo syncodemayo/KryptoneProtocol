@@ -66,10 +66,6 @@ jobs:
               fi
             done
             
-            # Set default production values if not provided
-            echo "NODE_ENV=production" >> .env
-            echo "PORT=8801" >> .env
-            
             tar -czf deploy.tar.gz api package.json ecosystem-prod.config.cjs .env
             scp deploy.tar.gz root@$DROPLET_IP:/var/www/privacyescrow-prod/
 
@@ -135,10 +131,6 @@ jobs:
                 echo "${var}=${val}" >> .env
               fi
             done
-            
-            # Set default development values if not provided
-            echo "NODE_ENV=development" >> .env
-            echo "PORT=8802" >> .env
             
             tar -czf deploy.tar.gz api package.json ecosystem-dev.config.cjs .env
             scp deploy.tar.gz root@$DROPLET_IP:/var/www/privacyescrow-dev/
