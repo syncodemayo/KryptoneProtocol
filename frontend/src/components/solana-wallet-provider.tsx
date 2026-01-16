@@ -19,42 +19,33 @@ interface SolanaWalletProviderProps {
 }
 
 export function SolanaWalletProvider({ children }: SolanaWalletProviderProps) {
-  // Use mainnet for production, devnet for development
-  const network = import.meta.env.PROD ? WalletAdapterNetwork.Mainnet : WalletAdapterNetwork.Devnet;
+  // The network can be set to 'devnet', 'testnet', or 'mainnet-beta'
+  const network = WalletAdapterNetwork.Mainnet;
 
-  // Configure proper RPC endpoints
+  // Use custom RPC URL from environment if available, otherwise fall back to public endpoint
   const endpoint = useMemo(() => {
-    // Try environment variable first
-    if (import.meta.env.VITE_SOLANA_RPC_URL) {
-      return import.meta.env.VITE_SOLANA_RPC_URL;
+    const customRpc = import.meta.env.VITE_SOLANA_RPC_URL;
+    if (customRpc) {
+      return customRpc;
     }
-    
-    // Use appropriate cluster URL based on environment
-    if (import.meta.env.PROD) {
-      // For production, use a reliable mainnet RPC
-      return 'https://solana-mainnet.g.alchemy.com/v2/b5pBorNHFCYUfnu4Fcp8T';
-    } else {
-      // For development, use devnet
-      return clusterApiUrl(WalletAdapterNetwork.Devnet);
-    }
-  }, []);
+    // Fallback to public RPC (may have rate limits)
+    return clusterApiUrl(network);
+  }, [network]);
 
   const wallets = useMemo(
     () => [
       new PhantomWalletAdapter(),
-      new SolflareWalletAdapter({ network }),
+      new SolflareWalletAdapter(),
       new TorusWalletAdapter(),
       new LedgerWalletAdapter(),
     ],
-    [network]
+    []
   );
 
   return (
     <ConnectionProvider endpoint={endpoint}>
       <WalletProvider wallets={wallets} autoConnect>
-        <WalletModalProvider>
-          {children}
-        </WalletModalProvider>
+        <WalletModalProvider>{children}</WalletModalProvider>
       </WalletProvider>
     </ConnectionProvider>
   );

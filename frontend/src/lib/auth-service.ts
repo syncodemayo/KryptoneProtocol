@@ -3,39 +3,32 @@ import axios, { type AxiosRequestConfig } from 'axios';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 export interface AuthResponse {
-  walletInfo: WalletInfo;
   token: string;
+  solanaAddress: string;
+  polygonAddress: string | null;
+  safeWalletAddress?: string | null;
+  message: string;
 }
 
+export interface WalletsInfo {
+  solanaAddress: string;
+  polygonAddress: string | null;
+  polygonConnected: boolean;
+  safeWalletAddress: string | null;
+  safeWalletConnected: boolean;
+}
+
+// Legacy interfaces for backward compatibility
 export interface WalletInfo {
-  solana: {
+  solana?: {
     address: string;
-    balance: {
-      sol: {
-        balance: string;
-        symbol: string;
-        mint: string;
-        decimals: number;
-      };
-      usdc?: {
-        balance: string;
-        symbol: string;
-        mint: string;
-        decimals: number;
-      };
-      usdt?: {
-        balance: string;
-        symbol: string;
-        mint: string;
-        decimals: number;
-      };
-    };
   };
-  isConnected: boolean;
-  createdAt: string;
+  polygon?: {
+    address: string;
+  };
+  createdAt?: string;
 }
 
-// Legacy interface for backward compatibility
 export interface LegacyWalletInfo {
   solanaAddress: string;
   solanaBalance: string;
@@ -44,94 +37,165 @@ export interface LegacyWalletInfo {
 
 class AuthService {
   private token: string | null = null;
+  private polygonAddress: string | null = null;
+  private safeWalletAddress: string | null = null;
 
   constructor() {
-    // Load token from localStorage with validation
-    try {
-      const storedToken = localStorage.getItem('auth_token');
-      if (storedToken && typeof storedToken === 'string' && storedToken.length > 10) {
-        // Basic token format validation
-        const parts = storedToken.split('.');
-        if (parts.length === 3) {
-          this.token = storedToken;
-        } else {
-          console.log('Invalid token format in localStorage, clearing...');
-          localStorage.removeItem('auth_token');
-        }
-      }
-    } catch (error) {
-      console.error('Error loading token from localStorage:', error);
-      localStorage.removeItem('auth_token');
-    }
+    // Load token and addresses from localStorage on initialization
+    this.token = localStorage.getItem('auth_token');
+    this.polygonAddress = localStorage.getItem('polygon_address');
+    this.safeWalletAddress = localStorage.getItem('safe_wallet_address');
   }
 
   // Generate message for signing
   generateAuthMessage(address: string): string {
     const timestamp = Date.now();
-    return `Sign this message to authenticate with MaskedCash on Solana: ${address} at ${timestamp}`;
+    return `Sign this message to authenticate with PolyBrain Lending Protocol: ${address} at ${timestamp}`;
   }
 
-  // Verify signature and get JWT token
-  async authenticateWithSignature(
+  // Login with Solana wallet signature
+  async login(
     solanaAddress: string,
     signature: string,
     message: string
   ): Promise<AuthResponse> {
     try {
       const response = await axios.post(
-        `${API_BASE_URL}/api/wallet`,
-        {},
+        `${API_BASE_URL}/api/auth/login`,
         {
-          headers: {
-            'solana-address': solanaAddress,
-            'solana-signature': signature,
-            'solana-message': message,
-            'Content-Type': 'application/json',
-          },
+          solanaAddress,
+          signature,
+          message,
         }
       );
 
-      const { walletInfo, token } = response.data;
+      const { token, polygonAddress } = response.data;
 
-      // Store token for future requests with validation
-      if (token && typeof token === 'string') {
-        this.token = token;
-        localStorage.setItem('auth_token', token);
-      } else {
-        throw new Error('Invalid token received from server');
+      // Store token for future requests
+      this.token = token;
+      localStorage.setItem('auth_token', token);
+
+      // Store polygon address if connected
+      if (polygonAddress) {
+        this.polygonAddress = polygonAddress;
+        localStorage.setItem('polygon_address', polygonAddress);
       }
 
-      return { walletInfo, token };
+      return response.data;
     } catch (error) {
-      // Better error handling
-      if (axios.isAxiosError(error)) {
-        const errorMessage = error.response?.data?.error || error.message;
-        throw new Error(errorMessage);
-      }
       const errorMessage =
-        error instanceof Error ? error.message : 'Authentication failed';
+        axios.isAxiosError(error) && error.response?.data?.error
+          ? error.response.data.error
+          : error instanceof Error
+            ? error.message
+            : 'Authentication failed';
       throw new Error(errorMessage);
     }
   }
 
-  // Fetch wallet info from API using stored token
-  async fetchWalletInfo(): Promise<WalletInfo> {
+  // Legacy method for backward compatibility
+  async authenticateWithSignature(
+    solanaAddress: string,
+    signature: string,
+    message: string
+  ): Promise<{ walletInfo: WalletInfo; token: string }> {
+    const response = await this.login(solanaAddress, signature, message);
+    return {
+      walletInfo: {
+        solana: { address: response.solanaAddress },
+        polygon: response.polygonAddress ? { address: response.polygonAddress } : undefined,
+      },
+      token: response.token,
+    };
+  }
+
+  // Connect Polygon wallet
+  async connectPolygonWallet(
+    solanaAddress: string,
+    polygonAddress: string,
+    signature?: string,
+    message?: string
+  ): Promise<{ success: boolean; polygonAddress: string }> {
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/api/auth/connect-polygon`,
+        {
+          solanaAddress,
+          polygonAddress,
+          signature,
+          message,
+        }
+      );
+
+      // Store polygon address
+      this.polygonAddress = response.data.polygonAddress;
+      localStorage.setItem('polygon_address', response.data.polygonAddress);
+
+      return response.data;
+    } catch (error) {
+      const errorMessage =
+        axios.isAxiosError(error) && error.response?.data?.error
+          ? error.response.data.error
+          : error instanceof Error
+            ? error.message
+            : 'Failed to connect Polygon wallet';
+      throw new Error(errorMessage);
+    }
+  }
+
+  // Disconnect Polygon wallet
+  async disconnectPolygonWallet(solanaAddress: string): Promise<void> {
+    try {
+      await axios.post(
+        `${API_BASE_URL}/api/auth/disconnect-polygon`,
+        { solanaAddress },
+        {
+          headers: {
+            Authorization: this.token ? `Bearer ${this.token}` : '',
+          },
+        }
+      );
+
+      this.polygonAddress = null;
+      localStorage.removeItem('polygon_address');
+    } catch (error) {
+      const errorMessage =
+        axios.isAxiosError(error) && error.response?.data?.error
+          ? error.response.data.error
+          : error instanceof Error
+            ? error.message
+            : 'Failed to disconnect Polygon wallet';
+      throw new Error(errorMessage);
+    }
+  }
+
+  // Get connected wallets info
+  async getWalletsInfo(): Promise<WalletsInfo> {
     if (!this.token) {
       throw new Error('No authentication token available');
     }
 
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/wallet`, {
+      const response = await axios.get(`${API_BASE_URL}/api/auth/wallets`, {
         headers: {
-          Authorization: this.token,
+          Authorization: `Bearer ${this.token}`,
           'Content-Type': 'application/json',
         },
       });
 
-      return response.data.walletInfo;
+      // Update local addresses
+      if (response.data.polygonAddress) {
+        this.polygonAddress = response.data.polygonAddress;
+        localStorage.setItem('polygon_address', response.data.polygonAddress);
+      }
+      if (response.data.safeWalletAddress) {
+        this.safeWalletAddress = response.data.safeWalletAddress;
+        localStorage.setItem('safe_wallet_address', response.data.safeWalletAddress);
+      }
+
+      return response.data;
     } catch (error: unknown) {
       if (axios.isAxiosError(error) && error.response?.status === 401) {
-        // Token expired or invalid, clear it
         this.logout();
         throw new Error('Session expired. Please reconnect your wallet.');
       }
@@ -146,61 +210,95 @@ class AuthService {
     }
   }
 
+  // Legacy method - fetch wallet info
+  async fetchWalletInfo(): Promise<WalletInfo> {
+    const walletsInfo = await this.getWalletsInfo();
+    return {
+      solana: { address: walletsInfo.solanaAddress },
+      polygon: walletsInfo.polygonAddress ? { address: walletsInfo.polygonAddress } : undefined,
+    };
+  }
+
   // Get current token
   getToken(): string | null {
     return this.token;
   }
 
+  // Get connected Polygon address
+  getPolygonAddress(): string | null {
+    return this.polygonAddress;
+  }
+
   // Check if user is authenticated
   isAuthenticated(): boolean {
-    if (!this.token || typeof this.token !== 'string') {
-      return false;
+    return !!this.token;
+  }
+
+  // Check if Polygon wallet is connected
+  isPolygonConnected(): boolean {
+    return !!this.polygonAddress;
+  }
+
+  // Connect Safe wallet
+  async connectSafeWallet(safeWalletAddress: string): Promise<{ success: boolean; safeWalletAddress: string }> {
+    if (!this.token) {
+      throw new Error('No authentication token available');
     }
 
-    // Basic JWT format check
-    const parts = this.token.split('.');
-    if (parts.length !== 3) return false;
-
     try {
-      // Basic expiry check if possible by decoding payload
-      const payload = JSON.parse(atob(parts[1]));
-      if (payload.exp && Date.now() >= payload.exp * 1000) {
-        console.log('Token expired according to payload');
-        return false;
+      const response = await axios.post(
+        `${API_BASE_URL}/api/auth/add-polymarket-wallet`,
+        { safeWalletAddress },
+        {
+          headers: {
+            Authorization: `Bearer ${this.token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      // Store Safe wallet address
+      this.safeWalletAddress = response.data.safeWalletAddress;
+      localStorage.setItem('safe_wallet_address', response.data.safeWalletAddress);
+
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.data?.error) {
+        // Extract the error message from the backend response
+        const backendError = error.response.data.error;
+        const errorCode = error.response.data.code;
+        
+        // If it's a NOT_OWNER error, provide a clear message
+        if (errorCode === 'NOT_OWNER' || backendError.includes('not an owner')) {
+          throw new Error('Your Polygon wallet is not an owner of this Safe wallet. Please ensure you are using the correct Safe wallet address that you own.');
+        }
+        
+        // Return the backend error message as-is for other cases
+        throw new Error(backendError);
       }
-    } catch (e) {
-      // If we can't decode, just assume it's valid if format is okay
-    }
-
-    return true;
-  }
-
-  // Check if wallet exists (used before creating wallet automatically)
-  async checkWalletExists(solanaAddress: string): Promise<boolean> {
-    try {
-      const response = await axios.get(`${API_BASE_URL}/api/wallet/exists`, {
-        params: { address: solanaAddress },
-      });
-      return response.data.exists;
-    } catch (error) {
-      // If endpoint doesn't exist or returns error, assume wallet doesn't exist
-      return false;
-    }
-  }
-
-  // Create wallet (no signature required for new wallets)
-  async createWallet(solanaAddress: string): Promise<WalletInfo> {
-    try {
-      const response = await axios.post(`${API_BASE_URL}/api/wallet/create`, {
-        solanaAddress,
-      });
-
-      return response.data.walletInfo;
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Wallet creation failed';
+      
+      // Fallback for non-axios errors
+      const errorMessage = error instanceof Error ? error.message : 'Failed to connect Safe wallet';
       throw new Error(errorMessage);
     }
+  }
+
+  // Get connected Safe wallet address
+  getSafeWalletAddress(): string | null {
+    return this.safeWalletAddress;
+  }
+
+  // Check if Safe wallet is connected
+  isSafeWalletConnected(): boolean {
+    return !!this.safeWalletAddress;
+  }
+
+  // Legacy method - create wallet (now just returns success since we don't create custodial wallets)
+  async createWallet(_solanaAddress: string): Promise<WalletInfo> {
+    // No longer needed - users connect their own wallets
+    return {
+      solana: { address: _solanaAddress },
+    };
   }
 
   // Make authenticated API calls
@@ -248,7 +346,11 @@ class AuthService {
   // Logout and clear token
   logout() {
     this.token = null;
+    this.polygonAddress = null;
+    this.safeWalletAddress = null;
     localStorage.removeItem('auth_token');
+    localStorage.removeItem('polygon_address');
+    localStorage.removeItem('safe_wallet_address');
   }
 }
 

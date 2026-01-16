@@ -1,130 +1,87 @@
-@import '@solana/wallet-adapter-react-ui/styles.css';
-
-/* NUCLEAR OPTION: Force ALL Solana wallet buttons to be BLACK */
-button[class*="wallet-adapter"],
-.wallet-adapter-button,
-.wallet-adapter-button-trigger,
-[class*="wallet-adapter-button"],
-button[data-testid*="wallet"],
-button:has(span:contains("Connect")),
-button:has(span:contains("Wallet")) {
-  background: #000000 !important;
-  background-color: #000000 !important;
-  background-image: none !important;
-  color: white !important;
-  border: 1px solid #333333 !important;
-  border-color: #333333 !important;
+@import "tailwindcss";
+@config "../../tailwind.config.cjs";
+ 
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+ 
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+ 
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+ 
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+ 
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+ 
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+ 
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+ 
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+ 
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+ 
+    --radius: 0.5rem;
+  }
+ 
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+ 
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+ 
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+ 
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+ 
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+ 
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+ 
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+ 
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+ 
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+  }
+}
+ 
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }
 
-button[class*="wallet-adapter"]:hover,
-.wallet-adapter-button:hover,
-.wallet-adapter-button-trigger:hover,
-[class*="wallet-adapter-button"]:hover,
-button[data-testid*="wallet"]:hover,
-button:has(span:contains("Connect")):hover,
-button:has(span:contains("Wallet")):hover {
-  background: #333333 !important;
-  background-color: #333333 !important;
-  background-image: none !important;
-  color: white !important;
-  border-color: #555555 !important;
-}
-
-/* Kill any gradients or pseudo-elements */
-button[class*="wallet-adapter"]::before,
-button[class*="wallet-adapter"]::after,
-.wallet-adapter-button::before,
-.wallet-adapter-button::after {
-  display: none !important;
-  content: none !important;
-}
-
-/* Force all child elements to be white */
-button[class*="wallet-adapter"] *,
-.wallet-adapter-button *,
-.wallet-adapter-button-trigger * {
-  color: white !important;
-  fill: white !important;
-}
-
-/* Global black, white, and silver theme overrides */
-/* Remove all colored accents and force monochrome */
-.bg-blue-50 { @apply bg-gray-50; }
-.bg-blue-100 { @apply bg-gray-100; }
-.bg-blue-600 { @apply bg-black; }
-.bg-blue-700 { @apply bg-gray-900; }
-.bg-teal-50 { @apply bg-gray-50; }
-.bg-teal-100 { @apply bg-gray-100; }
-.bg-green-50 { @apply bg-gray-100; }
-.bg-green-100 { @apply bg-gray-200; }
-.bg-red-50 { @apply bg-gray-100; }
-.bg-red-100 { @apply bg-gray-200; }
-.bg-yellow-50 { @apply bg-gray-100; }
-.bg-orange-50 { @apply bg-gray-100; }
-
-.text-blue-600 { @apply text-black; }
-.text-blue-700 { @apply text-black; }
-.text-teal-600 { @apply text-black; }
-.text-green-600 { @apply text-black; }
-.text-green-800 { @apply text-gray-900; }
-.text-red-600 { @apply text-gray-800; }
-.text-red-800 { @apply text-gray-900; }
-.text-orange-600 { @apply text-gray-800; }
-.text-orange-700 { @apply text-gray-900; }
-.text-orange-800 { @apply text-gray-900; }
-
-.border-blue-200 { @apply border-gray-200; }
-.border-teal-300 { @apply border-gray-300; }
-.border-green-200 { @apply border-gray-200; }
-.border-red-200 { @apply border-gray-200; }
-.border-orange-200 { @apply border-gray-200; }
-
-/* Status color overrides - use matte silver tones */
-.bg-green-500 { @apply bg-gray-400; }
-.bg-red-500 { @apply bg-gray-600; }
-.bg-yellow-500 { @apply bg-gray-300; }
-
-/* Ensure consistent black, white, and silver styling */
-.wise-card {
-  @apply bg-white border-gray-200 text-black shadow-sm;
-}
-
-.wise-button {
-  @apply bg-black text-white border-black hover:bg-gray-900 transition-all duration-200;
-}
-
-.wise-button-silver {
-  @apply bg-gray-300 text-gray-900 border-gray-400 hover:bg-gray-400 hover:shadow-md transition-all duration-200;
-}
-
-.wise-button-silver:hover {
-  background: linear-gradient(145deg, #ffffff 0%, #f1f3f4 50%, #e8eaed 100%);
-  @apply shadow-lg;
-}
-
-.banking-card {
-  @apply bg-white border-gray-200 shadow-sm hover:shadow-md transition-all duration-300;
-}
-
-/* Matte accent elements */
-.silver-nav {
-  @apply bg-gray-100 border-b border-gray-300;
-}
-
-.silver-sidebar {
-  @apply bg-gray-200 border-r border-gray-300;
-}
-
-/* Matte input fields */
-.silver-input {
-  @apply bg-white border-gray-300 text-gray-900 focus:border-gray-400 focus:ring-gray-300;
-}
-
-/* Dialog and modal styling */
-.dialog-overlay {
-  @apply bg-black/50 backdrop-blur-sm;
-}
-
-.dialog-content {
-  @apply bg-white border-gray-200 shadow-2xl;
+@layer components {
+  .wallet-adapter-button {
+    border-radius: 0.75rem !important;
+    padding-left: 1.5rem !important;
+    padding-right: 1.5rem !important;
+    height: 2.5rem !important;
+  }
 }
