@@ -1,3 +1,5 @@
+import { useMemo } from 'react';
+
 import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 import '@solana/wallet-adapter-react-ui/styles.css';
 import {
@@ -6,9 +8,11 @@ import {
   SolflareWalletAdapter,
   TorusWalletAdapter,
 } from '@solana/wallet-adapter-wallets';
+import { clusterApiUrl } from '@solana/web3.js';
 
-// Use the Alchemy Solana mainnet RPC endpoint
-const endpoint = 'https://solana-mainnet.g.alchemy.com/v2/b5pBorNHFCYUfnu4Fcp8T';
+// You can also provide a custom RPC endpoint
+// eslint-disable-next-line react-hooks/rules-of-hooks
+const endpoint = useMemo(() => clusterApiUrl(WalletAdapterNetwork.Mainnet), []);
 
 // Default styles that can be overridden by your app
 
