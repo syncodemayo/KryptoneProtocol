@@ -83,9 +83,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (response.ok) {
             const data = await response.json();
             setIsRegistered(data.isRegistered);
+          } else {
+            console.error('Failed to check registration status, defaulting to new user');
+            setIsRegistered(false);
           }
         } catch (error) {
           console.error('Error checking registration status:', error);
+          setIsRegistered(false);
         }
       } else if (!publicKey) {
         setIsRegistered(null);
