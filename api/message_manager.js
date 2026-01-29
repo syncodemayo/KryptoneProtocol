@@ -18,31 +18,37 @@ class MessageManager {
   /**
    * Create or get existing conversation between buyer and seller
    */
-  async createOrGetConversation(buyerAddress, sellerAddress) {
+  async createOrGetConversation(buyerAddress, sellerAddress, tradeId = null) {
     try {
+      const b = buyerAddress.toLowerCase();
+      const s = sellerAddress.toLowerCase();
+      
       // Verify seller is actually a Seller
-      if (!this.db.isSeller(sellerAddress)) {
+      if (!this.db.isSeller(s)) {
+        console.error(`[MessageManager] createOrGetConversation failed: ${s} is not a registered Seller`);
         throw new Error('Recipient must be a registered Seller');
       }
 
-      const conversationId = this.generateConversationId(buyerAddress, sellerAddress);
+      // If tradeId provided, conversation is linked to that trade
+      // Otherwise, fall back to generic address-pair chat
+      const conversationId = tradeId 
+          ? `trade_${tradeId}`
+          : this.generateConversationId(b, s);
+
+      console.log(`[MessageManager] Ensuring conversation ${conversationId} between ${b} and ${s} (Trade: ${tradeId || 'None'})`);
       
       // Check if conversation exists
       let conversation = this.db.getConversation(conversationId);
       
       if (!conversation) {
+        console.log(`[MessageManager] Conversation ${conversationId} not found, creating new one`);
         // Create new conversation
-        conversation = this.db.createConversation(conversationId, buyerAddress, sellerAddress);
+        conversation = this.db.createConversation(conversationId, b, s);
       }
 
       return conversation;
     } catch (error) {
-      logger.error({
-        message: 'Error creating/getting conversation',
-        buyerAddress,
-        sellerAddress,
-        error: error.message,
-      });
+      console.error('[MessageManager] Error in createOrGetConversation:', error);
       throw error;
     }
   }
@@ -57,55 +63,54 @@ class MessageManager {
     const buyer = conversation.buyer_address?.toLowerCase();
     const seller = conversation.seller_address?.toLowerCase();
     
-    return address === buyer || address === seller;
+    const hasAccess = address === buyer || address === seller;
+    if (!hasAccess) {
+        console.warn(`[MessageManager] Access denied for ${address} to conversation ${conversation.conversation_id}`);
+    }
+    return hasAccess;
   }
 
   /**
    * Send a message
    */
-  async sendMessage(senderAddress, recipientAddress, messageText, isEncrypted = false, encryptedMessage = null, encryptionMetadata = null) {
+  async sendMessage(senderAddress, recipientAddress, messageText, isEncrypted = false, encryptedMessage = null, encryptionMetadata = null, tradeId = null) {
     try {
+      const s = senderAddress.toLowerCase();
+      const r = recipientAddress.toLowerCase();
+      
       // Determine buyer and seller
-      const isSenderSeller = this.db.isSeller(senderAddress);
-      const buyerAddress = isSenderSeller ? recipientAddress : senderAddress;
-      const sellerAddress = isSenderSeller ? senderAddress : recipientAddress;
+      const isSenderSeller = this.db.isSeller(s);
+      const buyerAddress = isSenderSeller ? r : s;
+      const sellerAddress = isSenderSeller ? s : r;
+
+      console.log(`[MessageManager] Sending message from ${s} to ${r} (Buyer: ${buyerAddress}, Seller: ${sellerAddress})`);
 
       // Create or get conversation
-      const conversation = await this.createOrGetConversation(buyerAddress, sellerAddress);
+      const conversation = await this.createOrGetConversation(buyerAddress, sellerAddress, tradeId);
 
       // Save message
       const message = this.db.saveMessage({
         conversationId: conversation.conversation_id,
-        senderAddress,
-        recipientAddress,
+        senderAddress: s,
+        recipientAddress: r,
         messageText: isEncrypted ? '' : messageText, // Empty if encrypted
         encryptedMessage,
         encryptionMetadata,
         isEncrypted,
       });
 
-      // Update conversation last message time
-      this.db.updateConversationLastMessage(conversation.conversation_id);
+      // Update conversation last message time and text
+      const lastMessageText = isEncrypted ? '🔒 Encrypted Message' : (messageText.slice(0, 50) + (messageText.length > 50 ? '...' : ''));
+      this.db.updateConversationLastMessage(conversation.conversation_id, lastMessageText);
 
-      logger.info({
-        message: 'Message sent',
-        conversationId: conversation.conversation_id,
-        senderAddress,
-        recipientAddress,
-        isEncrypted,
-      });
+      console.log(`[MessageManager] Message saved: ${message.id}, conversation updated`);
 
       return {
         ...message,
         conversationId: conversation.conversation_id,
       };
     } catch (error) {
-      logger.error({
-        message: 'Error sending message',
-        senderAddress,
-        recipientAddress,
-        error: error.message,
-      });
+      console.error('[MessageManager] Error in sendMessage:', error);
       throw error;
     }
   }

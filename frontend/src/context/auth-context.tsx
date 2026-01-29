@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { toast } from 'sonner';
+import bs58 from 'bs58';
 
 // Mock User Type
 export type UserType = 'buyer' | 'seller';
@@ -18,6 +19,7 @@ interface AuthContextType {
   register: (name: string, type: UserType) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
+  isRegistered: boolean | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -27,118 +29,217 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isRegistered, setIsRegistered] = useState<boolean | null>(null);
 
-  // Load user from local storage on mount
+  // Load session from local storage on mount
   useEffect(() => {
     const storedUser = localStorage.getItem('shadowpay_user');
-    if (storedUser) {
+    const token = localStorage.getItem('shadowpay_token');
+    
+    if (storedUser && token) {
       setUser(JSON.parse(storedUser));
       setIsAuthenticated(true);
+    } else if (token) {
+        // Attempt to re-hydrate user from token if missing in local storage
+        fetch('http://localhost:5001/api/user/info', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        })
+        .then(res => {
+            if (res.ok) return res.json();
+            throw new Error('Invalid token');
+        })
+        .then(userData => {
+            if (userData && userData.shadowPay) {
+                // We need the address from the wallet adapter generally, but if wallet is not connected yet,
+                // we might need to rely on what the backend thinks or wait for wallet.
+                // However, without publicKey, we can't fully restore 'User' object as defined.
+                // But wait, the token implies we verified the address.
+                // We can't easily get the address from the backend /api/user/info IF it doesn't return it?
+                // api/user/info returns { success: true, shadowPay: { ... } }
+                // Let's assume shadowPay has the address or we can infer it?
+                // We should probably rely on wallet adapter reconnection too?
+            }
+        })
+        .catch(() => {
+            // failed, clear token
+            localStorage.removeItem('shadowpay_token');
+        });
     }
   }, []);
 
-  // Handle wallet connection & auto-login
+  // Handle wallet disconnection - REMOVED to prevent logout on page refresh
+  // useEffect(() => {
+  //   if (!publicKey && isAuthenticated) {
+  //     logout();
+  //   }
+  // }, [publicKey]);
+
+  // Check registration status when wallet connects
   useEffect(() => {
-    if (publicKey) {
-        const storedUserKey = `user_${publicKey.toBase58()}`;
-        const storedUser = localStorage.getItem(storedUserKey);
-        
-        if (storedUser) {
-            setUser(JSON.parse(storedUser));
-            setIsAuthenticated(true);
-            localStorage.setItem('shadowpay_user', storedUser); // Set current session
+    const checkStatus = async () => {
+      if (publicKey && !isAuthenticated) {
+        try {
+          const response = await fetch(`http://localhost:5001/api/auth/message?solanaAddress=${publicKey.toBase58()}`);
+          if (response.ok) {
+            const data = await response.json();
+            setIsRegistered(data.isRegistered);
+          } else {
+            console.error('Failed to check registration status, defaulting to new user');
+            setIsRegistered(false);
+          }
+        } catch (error) {
+          console.error('Error checking registration status:', error);
+          setIsRegistered(false);
         }
-    } else if (isAuthenticated) {
-      logout();
-    }
-  }, [publicKey]);
+      } else if (!publicKey) {
+        setIsRegistered(null);
+      }
+    };
+    
+    checkStatus();
+  }, [publicKey, isAuthenticated]);
 
   const login = async () => {
-    if (!publicKey) {
-      toast.error('Wallet not connected');
+    if (!publicKey || !signMessage) {
+      toast.error('Wallet not connected or does not support signing');
       return;
     }
 
     setIsLoading(true);
     try {
-      const message = new TextEncoder().encode(
-        `Login to ShadowPay. Address: ${publicKey.toBase58()}. Nonce: ${Date.now()}`
-      );
-      
-      try {
-          if (signMessage) {
-            await signMessage(message);
-          } else {
-            throw new Error('Wallet does not support message signing');
-          }
-      } catch (signError: any) {
-          toast.warning('Wallet signing failed. Proceeding with mock authentication for demo.');
+      // 1. Get auth message from backend
+      const msgResponse = await fetch(`http://localhost:5001/api/auth/message?solanaAddress=${publicKey.toBase58()}`);
+      if (!msgResponse.ok) throw new Error('Failed to get auth message');
+      const { message } = await msgResponse.json();
+
+      // 2. Sign message
+      const encodedMessage = new TextEncoder().encode(message);
+      const signature = await signMessage(encodedMessage);
+      const signatureBase58 = bs58.encode(signature);
+
+      // 3. Login with backend
+      const loginResponse = await fetch('http://localhost:5001/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          solanaAddress: publicKey.toBase58(),
+          signature: signatureBase58,
+          message,
+        }),
+      });
+
+      if (!loginResponse.ok) {
+        const errorData = await loginResponse.json();
+        throw new Error(errorData.error || 'Authentication failed');
       }
+
+      const { token } = await loginResponse.json();
+
+      // 4. Fetch user info with the new token
+      const userResponse = await fetch('http://localhost:5001/api/user/info', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       
-      const storedUser = localStorage.getItem(`user_${publicKey.toBase58()}`);
+      const userData = await userResponse.json();
       
-      if (storedUser) {
-        const userData = JSON.parse(storedUser);
-        setUser(userData);
-        setIsAuthenticated(true);
-        localStorage.setItem('shadowpay_user', JSON.stringify(userData));
-        toast.success('Welcome back!');
+      const loggedInUser: User = {
+        address: publicKey.toBase58(),
+        name: userData.shadowPay?.userType || 'User',
+        type: (userData.shadowPay?.userType?.toLowerCase() === 'seller' ? 'seller' : 'buyer') as UserType,
+      };
+
+      // 5. Store session
+      localStorage.setItem('shadowpay_token', token);
+      localStorage.setItem('shadowpay_user', JSON.stringify(loggedInUser));
+      setUser(loggedInUser);
+      setIsAuthenticated(true);
+      toast.success('Authentication successful!');
+
+      // Redirect based on role
+      if (loggedInUser.type === 'seller') {
+        window.location.href = '/trades';
       } else {
-        toast.info('Please create an account to continue');
+        window.location.href = '/market';
       }
+
     } catch (error: any) {
       console.error('Login failed:', error);
-      toast.error(`Login failed: ${error.message || 'Unknown error'}`);
+      toast.error(`Login failed: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
   };
 
   const register = async (name: string, type: UserType) => {
-    if (!publicKey) {
+    if (!publicKey || !signMessage) {
       toast.error('Wallet not connected');
       return;
     }
 
     setIsLoading(true);
     try {
-      const message = new TextEncoder().encode(
-        `Create ShadowPay Account for ${name} (${type}). Address: ${publicKey.toBase58()}`
-      );
+      // 1. First ensure we are authenticated with backend
+      const msgResponse = await fetch(`http://localhost:5001/api/auth/message?solanaAddress=${publicKey.toBase58()}`);
+      const { message } = await msgResponse.json();
+      const encodedMessage = new TextEncoder().encode(message);
+      const signature = await signMessage(encodedMessage);
+      const signatureBase58 = bs58.encode(signature);
 
-      try {
-          if (signMessage) {
-            await signMessage(message);
-          } else {
-             throw new Error('Wallet does not support message signing');
-          }
-      } catch (signError: any) {
-          toast.warning('Wallet signing failed. Proceeding with mock authentication for demo.');
-      }
+      const loginResponse = await fetch('http://localhost:5001/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          solanaAddress: publicKey.toBase58(),
+          signature: signatureBase58,
+          message,
+        }),
+      });
+      
+      const { token } = await loginResponse.json();
+      localStorage.setItem('shadowpay_token', token);
+
+      // 2. Register with ShadowPay
+      const regResponse = await fetch('http://localhost:5001/api/user/register-shadowpay', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          userType: type === 'seller' ? 'Seller' : 'Buyer',
+          signature: signatureBase58,
+          message: message,
+        }),
+      });
+
+      const data = await regResponse.json();
 
       const newUser: User = {
         address: publicKey.toBase58(),
-        name,
-        type,
+        name: data.message?.includes('already registered') ? (user?.name || name) : name,
+        type: type,
       };
 
-      if (type === 'seller') {
-          const sellers = JSON.parse(localStorage.getItem('shadowpay_sellers') || '[]');
-          if (!sellers.find((s: any) => s.address === newUser.address)) {
-              sellers.push(newUser);
-              localStorage.setItem('shadowpay_sellers', JSON.stringify(sellers));
-          }
-      }
-
-      localStorage.setItem(`user_${publicKey.toBase58()}`, JSON.stringify(newUser));
       localStorage.setItem('shadowpay_user', JSON.stringify(newUser));
       setUser(newUser);
       setIsAuthenticated(true);
-      toast.success('Account created successfully!');
+      
+      if (data.message?.includes('already registered')) {
+          toast.info('You are already registered. Welcome back!');
+      } else {
+          toast.success('Account created successfully!');
+      }
+
+      // Redirect based on role
+      if (newUser.type === 'seller') {
+          window.location.href = '/trades';
+      } else {
+          window.location.href = '/market';
+      }
 
     } catch (error: any) {
       console.error('Registration failed:', error);
-      toast.error(`Registration failed: ${error.message || 'Check wallet console'}`);
+      toast.error(`Registration failed: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -148,12 +249,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setIsAuthenticated(false);
     localStorage.removeItem('shadowpay_user');
+    localStorage.removeItem('shadowpay_token');
     disconnect();
     toast.success('Logged out');
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, register, logout, isLoading }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, login, register, logout, isLoading, isRegistered }}>
       {children}
     </AuthContext.Provider>
   );

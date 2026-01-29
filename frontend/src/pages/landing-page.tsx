@@ -17,13 +17,12 @@ export function LandingPage() {
             </div>
             
             <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight text-white animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-100">
-              Trustless Privacy for <br />
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary via-blue-400 to-indigo-500 animate-gradient-x">Real-World Goods</span>
+              Anonymous Privacy Escrow <br />
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary via-blue-400 to-indigo-500 animate-gradient-x">for Digital Products</span>
             </h1>
 
             <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200">
-              The first privacy-preserving marketplace for physical goods on Solana. 
-              Secure your purchases with zero-knowledge proofs and institutional-grade encryption.
+              The first anonymous privacy-focused escrow service for digital products on Solana.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-8 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
@@ -38,15 +37,21 @@ export function LandingPage() {
         {/* <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[600px] bg-primary/10 rounded-full blur-[120px] opacity-40 z-0 pointer-events-none animate-pulse duration-[5s]" /> */}
       </section>
 
-      {/* Stats/Social Proof (Glassy Bar) */}
-      <section id="stats" className="container mx-auto px-4 md:px-6 -mt-10 relative z-20 scroll-mt-32">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-6 rounded-3xl bg-white/5 backdrop-blur-xl border border-white/10">
-            <StatItem label="Total Value Locked" value="$24M+" />
-            <StatItem label="Total Transactions" value="1.2M+" />
-            <StatItem label="Active Users" value="50k+" />
-            <StatItem label="Audited By" value="OtterSec" />
-        </div>
+      {/* Attribution Badge */}
+      <section className="container mx-auto px-4 md:px-6 -mt-6 relative z-20 flex justify-center">
+        <a 
+          href="https://x.com/radrdotfun" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white/5 backdrop-blur-xl border border-white/10 text-muted-foreground text-sm font-medium hover:bg-white/10 transition-colors cursor-pointer"
+        >
+          <span>Built using</span>
+          <span className="text-white font-semibold flex items-center gap-1">
+            RADR's shadowpay
+          </span>
+        </a>
       </section>
+
 
       {/* Features Grid */}
       <section id="features" className="container mx-auto px-4 md:px-6 py-32 scroll-mt-24">
@@ -118,14 +123,7 @@ export function LandingPage() {
   );
 }
 
-function StatItem({ label, value }: { label: string; value: string }) {
-    return (
-        <div className="text-center space-y-1 p-4">
-            <div className="text-2xl md:text-4xl font-bold text-white tracking-tight">{value}</div>
-            <div className="text-xs md:text-sm font-medium text-muted-foreground uppercase tracking-wider">{label}</div>
-        </div>
-    )
-}
+
 
 function FeatureCard({ icon, title, description, variant = 'primary' }: { icon: React.ReactNode; title: string; description: string, variant?: string }) {
     const colorClasses = {
