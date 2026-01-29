@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth, type UserType } from '@/context/auth-context';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,13 +23,13 @@ import { Loader2 } from 'lucide-react';
 import { useWallet } from '@solana/wallet-adapter-react';
 
 export function RegistrationModal() {
-  const { isAuthenticated, user, register, isLoading } = useAuth();
+  const { isAuthenticated, user, register, login, isLoading, isRegistered } = useAuth();
   const { connected } = useWallet();
   const [isOpen, setIsOpen] = useState(false);
   const [name, setName] = useState('');
   const [userType, setUserType] = useState<UserType>('buyer');
 
-  // Open modal if wallet is connected but user is not authenticated/registered
+  // Open modal if wallet is connected but user is not authenticated
   useEffect(() => {
     if (connected && !isAuthenticated && !user) {
       setIsOpen(true);
@@ -42,50 +43,82 @@ export function RegistrationModal() {
     await register(name, userType);
   };
 
+  const handleLogin = async () => {
+    await login();
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent className="sm:max-w-[425px] bg-[#020817] border-white/10 text-white">
         <DialogHeader>
-          <DialogTitle>Create ShadowPay Account</DialogTitle>
+          <DialogTitle>{isRegistered ? 'Welcome Back' : 'Create ShadowPay Account'}</DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            Sign a message to verify your identity and create your profile.
+            {isRegistered 
+              ? 'Please sign a message to authenticate and access your account.' 
+              : 'Sign a message to verify your identity and create your profile.'}
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Label htmlFor="name" className="text-white">Display Name</Label>
-            <Input
-              id="name"
-              placeholder="Enter your username"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="bg-white/5 border-white/10 text-white focus:border-primary"
-            />
+
+        {!isRegistered ? (
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name" className="text-white">Display Name</Label>
+              <Input
+                id="name"
+                placeholder="Enter your username"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="bg-white/5 border-white/10 text-white focus:border-primary"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="type" className="text-white">Account Type</Label>
+              <Select value={userType} onValueChange={(val: UserType) => setUserType(val)}>
+                <SelectTrigger className="bg-white/5 border-white/10 text-white">
+                  <SelectValue placeholder="Select user type" />
+                </SelectTrigger>
+                <SelectContent className="bg-[#020817] border-white/10 text-white">
+                  <SelectItem value="buyer">Buyer (I want to buy goods using crypto)</SelectItem>
+                  <SelectItem value="seller">Seller (I want to sell goods using crypto)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="type" className="text-white">Account Type</Label>
-            <Select value={userType} onValueChange={(val: UserType) => setUserType(val)}>
-              <SelectTrigger className="bg-white/5 border-white/10 text-white">
-                <SelectValue placeholder="Select user type" />
-              </SelectTrigger>
-              <SelectContent className="bg-[#020817] border-white/10 text-white">
-                <SelectItem value="buyer">Buyer (I want to buy goods using crypto)</SelectItem>
-                <SelectItem value="seller">Seller (I want to sell goods using crypto)</SelectItem>
-              </SelectContent>
-            </Select>
+        ) : (
+          <div className="py-8 flex flex-col items-center justify-center space-y-4">
+            <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center">
+                <Loader2 className={cn("w-8 h-8 text-primary", isLoading && "animate-spin")} />
+            </div>
+            <p className="text-sm text-center text-muted-foreground">
+                Your wallet is registered. Sign the message to continue.
+            </p>
           </div>
-        </div>
+        )}
+
         <DialogFooter>
-          <Button onClick={handleRegister} disabled={isLoading || !name.trim()} className="w-full bg-primary hover:bg-primary/90">
-            {isLoading ? (
-                <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Signing...
-                </>
-            ) : (
-                'Create Account'
-            )}
-          </Button>
+          {isRegistered ? (
+            <Button onClick={handleLogin} disabled={isLoading} className="w-full bg-primary hover:bg-primary/90">
+              {isLoading ? (
+                  <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Signing...
+                  </>
+              ) : (
+                  'Sign In to Account'
+              )}
+            </Button>
+          ) : (
+            <Button onClick={handleRegister} disabled={isLoading || !name.trim()} className="w-full bg-primary hover:bg-primary/90">
+              {isLoading ? (
+                  <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Signing...
+                  </>
+              ) : (
+                  'Create Account'
+              )}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
