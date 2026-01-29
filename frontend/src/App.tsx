@@ -17,11 +17,7 @@ function AppContent() {
     <Router>
       <Layout>
         <Routes>
-          <Route path="/" element={
-            isAuthenticated ? (
-              user?.type === 'seller' ? <Navigate to="/trades" /> : <Navigate to="/market" />
-            ) : <LandingPage />
-          } />
+          <Route path="/" element={<LandingPage />} />
           
           <Route path="/market" element={
             isAuthenticated ? (
