@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Package, ShieldCheck, Clock, CheckCircle2, XCircle, AlertCircle, ExternalLink, RefreshCw, Send, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 import { io, Socket } from 'socket.io-client';
+import { API_BASE_URL } from '@/lib/config';
 import { Input } from '@/components/ui/input';
 import { useRef } from 'react';
 import {
@@ -84,8 +85,8 @@ export function TradeDetailPage() {
         return;
     }
 
-    console.log('Initializing Socket.IO connection to http://localhost:5001');
-    const socket = io('http://localhost:5001', {
+    console.log(`Initializing Socket.IO connection to ${API_BASE_URL}`);
+    const socket = io(API_BASE_URL, {
       auth: { token },
       transports: ['websocket', 'polling']
     });
@@ -194,7 +195,7 @@ export function TradeDetailPage() {
   const fetchTrade = async () => {
     if (!id) return;
     try {
-      const response = await fetch(`http://localhost:5001/api/trades/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/trades/${id}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('shadowpay_token')}`
         }
@@ -213,7 +214,7 @@ export function TradeDetailPage() {
   const handleAccept = async () => {
     setIsActionLoading(true);
     try {
-      const response = await fetch(`http://localhost:5001/api/trades/${id}/accept`, {
+      const response = await fetch(`${API_BASE_URL}/api/trades/${id}/accept`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('shadowpay_token')}`
@@ -257,7 +258,7 @@ export function TradeDetailPage() {
 
   const handleDepositSignature = async (sig: string) => {
     try {
-      const response = await fetch(`http://localhost:5001/api/trades/${id}/deposit-signature`, {
+      const response = await fetch(`${API_BASE_URL}/api/trades/${id}/deposit-signature`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -297,7 +298,7 @@ export function TradeDetailPage() {
         }
       };
 
-      const response = await fetch(`http://localhost:5001/api/trades/${id}/settle`, {
+      const response = await fetch(`${API_BASE_URL}/api/trades/${id}/settle`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -326,7 +327,7 @@ export function TradeDetailPage() {
      setShowRejectConfirm(false);
      
      try {
-       const response = await fetch(`http://localhost:5001/api/trades/${id}/reject`, {
+       const response = await fetch(`${API_BASE_URL}/api/trades/${id}/reject`, {
          method: 'POST',
          headers: {
            'Authorization': `Bearer ${localStorage.getItem('shadowpay_token')}`

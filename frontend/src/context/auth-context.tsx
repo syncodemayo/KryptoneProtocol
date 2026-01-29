@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from '
 import { useWallet } from '@solana/wallet-adapter-react';
 import { toast } from 'sonner';
 import bs58 from 'bs58';
+import { API_BASE_URL } from '@/lib/config';
 
 // Mock User Type
 export type UserType = 'buyer' | 'seller';
@@ -41,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsAuthenticated(true);
     } else if (token) {
         // Attempt to re-hydrate user from token if missing in local storage
-        fetch('http://localhost:5001/api/user/info', {
+        fetch(`${API_BASE_URL}/api/user/info`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
         .then(res => {
@@ -79,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const checkStatus = async () => {
       if (publicKey && !isAuthenticated) {
         try {
-          const response = await fetch(`http://localhost:5001/api/auth/message?solanaAddress=${publicKey.toBase58()}`);
+          const response = await fetch(`${API_BASE_URL}/api/auth/message?solanaAddress=${publicKey.toBase58()}`);
           if (response.ok) {
             const data = await response.json();
             setIsRegistered(data.isRegistered);
@@ -108,7 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     try {
       // 1. Get auth message from backend
-      const msgResponse = await fetch(`http://localhost:5001/api/auth/message?solanaAddress=${publicKey.toBase58()}`);
+      const msgResponse = await fetch(`${API_BASE_URL}/api/auth/message?solanaAddress=${publicKey.toBase58()}`);
       if (!msgResponse.ok) throw new Error('Failed to get auth message');
       const { message } = await msgResponse.json();
 
@@ -118,7 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const signatureBase58 = bs58.encode(signature);
 
       // 3. Login with backend
-      const loginResponse = await fetch('http://localhost:5001/api/auth/login', {
+      const loginResponse = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -136,7 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { token } = await loginResponse.json();
 
       // 4. Fetch user info with the new token
-      const userResponse = await fetch('http://localhost:5001/api/user/info', {
+      const userResponse = await fetch(`${API_BASE_URL}/api/user/info`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -179,13 +180,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     try {
       // 1. First ensure we are authenticated with backend
-      const msgResponse = await fetch(`http://localhost:5001/api/auth/message?solanaAddress=${publicKey.toBase58()}`);
+      const msgResponse = await fetch(`${API_BASE_URL}/api/auth/message?solanaAddress=${publicKey.toBase58()}`);
       const { message } = await msgResponse.json();
       const encodedMessage = new TextEncoder().encode(message);
       const signature = await signMessage(encodedMessage);
       const signatureBase58 = bs58.encode(signature);
 
-      const loginResponse = await fetch('http://localhost:5001/api/auth/login', {
+      const loginResponse = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -199,7 +200,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('shadowpay_token', token);
 
       // 2. Register with ShadowPay
-      const regResponse = await fetch('http://localhost:5001/api/user/register-shadowpay', {
+      const regResponse = await fetch(`${API_BASE_URL}/api/user/register-shadowpay`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

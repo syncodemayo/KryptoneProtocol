@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { API_BASE_URL } from '@/lib/config';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
@@ -51,7 +52,7 @@ export function TradeModal({ isOpen, onClose, otherPartyAddress, onTradeCreated 
           payload.sellerAddress = otherPartyAddress;
       }
 
-      const response = await fetch('http://localhost:5001/api/trades', {
+      const response = await fetch(`${API_BASE_URL}/api/trades`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

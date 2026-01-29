@@ -1,6 +1,5 @@
 import axios, { type AxiosRequestConfig } from 'axios';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+import { API_BASE_URL } from './config';
 
 export interface AuthResponse {
   token: string;

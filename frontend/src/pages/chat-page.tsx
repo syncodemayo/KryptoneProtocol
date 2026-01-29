@@ -6,6 +6,7 @@ import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ArrowLeft, Send, MessageSquare, ShieldCheck } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
+import { API_BASE_URL } from '@/lib/config';
 import {
   Dialog,
   DialogContent,
@@ -47,7 +48,7 @@ export function ChatPage() {
 
     setIsCreating(true);
     try {
-        const response = await fetch('http://localhost:5001/api/trades', {
+        const response = await fetch(`${API_BASE_URL}/api/trades`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -96,7 +97,7 @@ export function ChatPage() {
     const token = localStorage.getItem('shadowpay_token');
     if (!token) return;
 
-    const socket = io('http://localhost:5001', {
+    const socket = io(API_BASE_URL, {
       auth: { token },
       transports: ['websocket', 'polling']
     });

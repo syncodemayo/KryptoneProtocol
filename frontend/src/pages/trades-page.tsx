@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/auth-context';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { API_BASE_URL } from '@/lib/config';
 import { Badge } from '@/components/ui/badge';
 import { Package, ArrowRight, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
@@ -30,7 +31,7 @@ export function TradesPage() {
   const fetchTrades = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:5001/api/trades', {
+      const response = await fetch(`${API_BASE_URL}/api/trades`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('shadowpay_token')}`
         }
