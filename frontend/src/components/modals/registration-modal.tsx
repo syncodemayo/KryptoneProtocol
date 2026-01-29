@@ -59,7 +59,14 @@ export function RegistrationModal() {
           </DialogDescription>
         </DialogHeader>
 
-        {!isRegistered ? (
+        {isRegistered === null ? (
+           <div className="py-12 flex flex-col items-center justify-center space-y-4">
+             <Loader2 className="w-8 h-8 text-primary animate-spin" />
+             <p className="text-sm text-center text-muted-foreground">
+               Checking registration status...
+             </p>
+           </div>
+        ) : !isRegistered ? (
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="name" className="text-white">Display Name</Label>
