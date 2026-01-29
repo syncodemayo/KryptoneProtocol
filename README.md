@@ -1,4 +1,4 @@
-# PrivacyEscrow API
+# KryptoneProtocol API
 
 Solana-based authentication and escrow services API.
 
