@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: 'privacyescrow-dev',
+      name: 'kryptoneprotocol-dev',
       script: 'api/api.js',
       instances: 1,
       exec_mode: 'cluster',

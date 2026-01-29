@@ -7,7 +7,7 @@ jobs:
   build:
     docker:
       - image: cimg/node:22.15.0
-    working_directory: ~/privacyescrow
+    working_directory: ~/kryptoneprotocol
     steps:
       - checkout
       - run:
@@ -32,7 +32,7 @@ jobs:
   deploy-prod:
     docker:
       - image: cimg/base:stable
-    working_directory: ~/privacyescrow
+    working_directory: ~/kryptoneprotocol
     steps:
       - attach_workspace:
           at: .
@@ -50,12 +50,13 @@ jobs:
       - run:
           name: Deploy to DigitalOcean
           command: |
-            ssh root@$DROPLET_IP 'mkdir -p /var/www/privacyescrow-prod'
+            ssh root@$DROPLET_IP 'mkdir -p /var/www/kryptoneprotocol-prod'
             
             # Create environment file with production variables
             echo "Creating production environment file..."
             for var in NODE_ENV PORT \
                       ENCRYPTION_KEY_JS JWT_SECRET \
+                      ADMIN_MASTER_KEY ADMIN_ADDRESSES \
                       ALCHEMY_RPC_URL USDC_MINT PAYMENT_WALLET_ADDRESS; do
 
               prefixed_var="PROD_${var}"
@@ -66,10 +67,14 @@ jobs:
               fi
             done
             
-            tar -czf deploy.tar.gz api package.json ecosystem-prod.config.cjs .env
-            scp deploy.tar.gz root@$DROPLET_IP:/var/www/privacyescrow-prod/
+            # Set default production values if not provided
+            echo "NODE_ENV=production" >> .env
+            echo "PORT=7394" >> .env
 
-            ssh root@$DROPLET_IP 'cd /var/www/privacyescrow-prod && \
+            tar -czf deploy.tar.gz api package.json ecosystem-prod.config.cjs .env
+            scp deploy.tar.gz root@$DROPLET_IP:/var/www/kryptoneprotocol-prod/
+
+            ssh root@$DROPLET_IP 'cd /var/www/kryptoneprotocol-prod && \
             tar -xzf deploy.tar.gz && \
             rm deploy.tar.gz && \
             
@@ -89,7 +94,7 @@ jobs:
             npm install -g pm2 && \
             
             # Stop existing process if running
-            pm2 delete privacyescrow-prod || true && \
+            pm2 delete kryptoneprotocol-prod || true && \
             
             # Start the application with PM2 using ecosystem file
             pm2 start ecosystem-prod.config.cjs || true \
@@ -98,7 +103,7 @@ jobs:
   deploy-dev:
     docker:
       - image: cimg/base:stable
-    working_directory: ~/privacyescrow
+    working_directory: ~/kryptoneprotocol
     steps:
       - attach_workspace:
           at: .
@@ -116,12 +121,13 @@ jobs:
       - run:
           name: Deploy to DigitalOcean
           command: |
-            ssh root@$DROPLET_IP 'mkdir -p /var/www/privacyescrow-dev'
+            ssh root@$DROPLET_IP 'mkdir -p /var/www/kryptoneprotocol-dev'
             
             # Create environment file with development variables
             echo "Creating development environment file..."
             for var in NODE_ENV PORT \
                       ENCRYPTION_KEY_JS JWT_SECRET \
+                      ADMIN_MASTER_KEY ADMIN_ADDRESSES \
                       ALCHEMY_RPC_URL USDC_MINT PAYMENT_WALLET_ADDRESS; do
 
               prefixed_var="DEV_${var}"
@@ -132,10 +138,14 @@ jobs:
               fi
             done
             
-            tar -czf deploy.tar.gz api package.json ecosystem-dev.config.cjs .env
-            scp deploy.tar.gz root@$DROPLET_IP:/var/www/privacyescrow-dev/
+            # Set default development values if not provided
+            echo "NODE_ENV=development" >> .env
+            echo "PORT=7283" >> .env
 
-            ssh root@$DROPLET_IP 'cd /var/www/privacyescrow-dev && \
+            tar -czf deploy.tar.gz api package.json ecosystem-dev.config.cjs .env
+            scp deploy.tar.gz root@$DROPLET_IP:/var/www/kryptoneprotocol-dev/
+
+            ssh root@$DROPLET_IP 'cd /var/www/kryptoneprotocol-dev && \
             tar -xzf deploy.tar.gz && \
             rm deploy.tar.gz && \
             
@@ -155,7 +165,7 @@ jobs:
             npm install -g pm2 && \
             
             # Stop existing process if running
-            pm2 delete privacyescrow-dev || true && \
+            pm2 delete kryptoneprotocol-dev || true && \
             
             # Start the application with PM2 using ecosystem file
             pm2 start ecosystem-dev.config.cjs && \
