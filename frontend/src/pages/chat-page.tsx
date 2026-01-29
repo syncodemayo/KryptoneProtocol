@@ -1,9 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { ArrowLeft, Send, ShieldCheck, DollarSign } from 'lucide-react';
+import { ArrowLeft, Send, MessageSquare, ShieldCheck } from 'lucide-react';
+import { io, Socket } from 'socket.io-client';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { toast } from 'sonner';
 
 interface ChatMessage {
   id: string;
@@ -13,133 +26,274 @@ interface ChatMessage {
 }
 
 export function ChatPage() {
-  const { id } = useParams(); // Wallet address of the other party
+  const { id } = useParams(); // Start chat with this address
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
-
-  // Determine chat ID (normally sorted addresses to create a unique room ID)
-  // For this mock, we just store by "chat_myAddr_otherAddr"
+  const [isConnected, setIsConnected] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   
+  // New Trade State
+  const [showCreateTrade, setShowCreateTrade] = useState(false);
+  const [tradeData, setTradeData] = useState({ name: '', price: '', description: '' });
+  const [isCreating, setIsCreating] = useState(false);
+
+  const handleCreateTrade = async () => {
+    if (!tradeData.name || !tradeData.price) {
+        toast.error('Item name and price are required');
+        return;
+    }
+
+    setIsCreating(true);
+    try {
+        const response = await fetch('http://localhost:5001/api/trades', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('shadowpay_token')}`
+            },
+            body: JSON.stringify({
+                itemName: tradeData.name,
+                priceInSol: parseFloat(tradeData.price),
+                description: tradeData.description,
+                sellerAddress: id // The chat partner is the seller
+            })
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+            toast.success('Trade proposal created!');
+            setShowCreateTrade(false);
+            navigate(`/trades/${data.trade.tradeId}`);
+        } else {
+            throw new Error(data.error || 'Failed to create trade');
+        }
+    } catch (error: any) {
+        toast.error(error.message);
+    } finally {
+        setIsCreating(false);
+    }
+  };
+  
+  const socketRef = useRef<Socket | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
-    // Load fake initial messages
-    setMessages([
-      { id: '1', sender: 'other', content: 'Hello! I am interested in selling SOL.', timestamp: Date.now() - 100000 },
-      { id: '2', sender: 'me', content: 'Hi, what is your rate?', timestamp: Date.now() - 50000 },
-    ]);
-  }, []);
+    if (scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
 
-  const handleSendMessage = () => {
-    if (!newMessage.trim()) return;
-    
-    const msg: ChatMessage = {
-      id: Date.now().toString(),
-      sender: 'me',
-      content: newMessage,
-      timestamp: Date.now(),
+  useEffect(() => {
+    if (!id || !user?.address) return;
+
+    // Determine conversation ID safely
+    const addresses = [user.address.toLowerCase(), id.toLowerCase()].sort();
+    const convId = `${addresses[0]}_${addresses[1]}`;
+    setConversationId(convId);
+
+    const token = localStorage.getItem('shadowpay_token');
+    if (!token) return;
+
+    const socket = io('http://localhost:5001', {
+      auth: { token },
+      transports: ['websocket', 'polling']
+    });
+
+    socketRef.current = socket;
+
+    socket.on('connect', () => {
+      console.log('Connected to chat server');
+      setIsConnected(true);
+      socket.emit('join_conversation', { conversationId: convId });
+      socket.emit('get_history', { conversationId: convId });
+    });
+
+    socket.on('message_history', (data: { conversationId: string, messages: any[] }) => {
+        if (data.conversationId === convId) {
+            const formattedMessages = data.messages.map(m => ({
+                id: m.id?.toString() || Math.random().toString(),
+                sender: (m.sender_address || m.senderAddress || '').toLowerCase() === user.address.toLowerCase() ? 'me' : 'other',
+                content: m.message_text || m.messageText,
+                timestamp: new Date(m.created_at || m.createdAt || Date.now()).getTime()
+            }));
+            setMessages(formattedMessages);
+        }
+    });
+
+    socket.on('message_received', (data: { message: any }) => {
+        const msg = data.message;
+        if (msg.conversationId === convId) {
+            setMessages(prev => {
+                if (prev.some(m => m.id === msg.id)) return prev;
+                return [...prev, {
+                    id: msg.id?.toString(),
+                    sender: (msg.senderAddress || msg.sender_address || '').toLowerCase() === user.address.toLowerCase() ? 'me' : 'other',
+                    content: msg.messageText || msg.message_text,
+                    timestamp: new Date(msg.createdAt || msg.created_at || Date.now()).getTime()
+                }];
+            });
+        }
+    });
+
+    return () => {
+      socket.disconnect();
     };
+  }, [id, user?.address]);
 
-    setMessages([...messages, msg]);
+  const handleSendMessage = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!newMessage.trim() || !socketRef.current || !conversationId) return;
+
+    const text = newMessage;
     setNewMessage('');
-    
-    // Mock reply
-    setTimeout(() => {
-        const reply: ChatMessage = {
-            id: (Date.now() + 1).toString(),
-            sender: 'other',
-            content: 'I can do market rate + 2%.',
-            timestamp: Date.now(),
-        };
-        setMessages(prev => [...prev, reply]);
-    }, 1500);
+
+    // Optimistic update
+    const optimisticId = `opt_${Date.now()}`;
+    setMessages(prev => [...prev, {
+        id: optimisticId,
+        sender: 'me',
+        content: text,
+        timestamp: Date.now()
+    }]);
+
+    socketRef.current.emit('send_message', {
+        conversationId,
+        recipientAddress: id, // The ID param is the other user's address
+        messageText: text
+    });
   };
 
-  const handleStartTrade = () => {
-      // Logic to start escow trade
-      console.log('Starting trade with', id);
-      // Could open a modal or redirect to a trade creation flow
-      // For now, just logging
-  };
+  if (!id) return <div>Invalid Chat</div>;
 
   return (
-    <div className="container mx-auto px-4 py-8 h-[calc(100vh-100px)] flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6 bg-white/5 p-4 rounded-xl border border-white/10 backdrop-blur-md">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="text-white hover:bg-white/10">
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div>
-            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              Chat with <span className="font-mono bg-blue-500/20 px-2 py-0.5 rounded text-blue-400 text-base">{id?.slice(0, 6)}...{id?.slice(-4)}</span>
-            </h2>
-            <div className="flex items-center gap-1 text-xs text-green-400">
-              <span className="relative flex h-2 w-2 mr-1">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-              </span>
-              Online • Verified Seller
+    <div className="container mx-auto px-4 py-24 min-h-screen">
+      <Button 
+        onClick={() => navigate('/conversations')} 
+        variant="ghost" 
+        className="mb-6 text-muted-foreground hover:bg-white hover:text-black"
+      >
+        <ArrowLeft className="w-4 h-4 mr-2" /> Back to Conversations
+      </Button>
+
+      <Card className="bg-[#0f172a]/40 border-white/10 backdrop-blur-sm shadow-xl h-[calc(100vh-10rem)] md:h-[700px] flex flex-col">
+        <CardHeader className="border-b border-white/5 pb-4">
+            <div className="flex justify-between items-center">
+                <CardTitle className="text-white flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white">
+                        <MessageSquare className="w-5 h-5" />
+                    </div>
+                    <div>
+                        <p className="text-lg font-mono">{id ? `${id.substring(0, 6)}...${id.substring(id.length - 4)}` : ''}</p>
+                        <p className="text-xs text-green-400 flex items-center gap-1 font-normal">
+                            <ShieldCheck className="w-3 h-3" /> End-to-End Encrypted
+                        </p>
+                    </div>
+                </CardTitle>
+                <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+            </div>
+            
+            <Button 
+                onClick={() => setShowCreateTrade(true)} 
+                className="w-full mt-4 bg-white text-black hover:bg-white/90"
+            >
+                <ShieldCheck className="w-4 h-4 mr-2" />
+                Start Trade
+            </Button>
+        </CardHeader>
+
+        <div className="flex-1 overflow-y-auto p-6 space-y-4" ref={scrollRef}>
+            {messages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground opacity-50 space-y-4">
+                    <MessageSquare className="w-16 h-16" />
+                    <p className="text-lg">No messages start yet.</p>
+                </div>
+            ) : (
+                messages.map((msg) => (
+                    <div key={msg.id} className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-3 py-2 md:px-4 md:py-3 text-sm ${
+                            msg.sender === 'me' 
+                            ? 'bg-primary text-white rounded-br-none' 
+                            : 'bg-white/10 text-white rounded-bl-none'
+                        }`}>
+                            <p>{msg.content}</p>
+                            <span className="text-[10px] opacity-50 mt-1 block text-right">
+                                {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                        </div>
+                    </div>
+                ))
+            )}
+        </div>
+
+        <div className="p-4 border-t border-white/5 bg-black/20">
+            <form className="flex gap-4" onSubmit={handleSendMessage}>
+                <Input 
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    placeholder="Type a secure message..." 
+                    className="bg-black/50 border-white/10 text-white focus:border-primary"
+                />
+                <Button type="submit" className="bg-primary hover:bg-primary/90 text-white px-6">
+                    <Send className="w-4 h-4" />
+                </Button>
+            </form>
+        </div>
+      </Card>
+
+      <Dialog open={showCreateTrade} onOpenChange={setShowCreateTrade}>
+        <DialogContent className="bg-[#0f172a] border-white/10 text-white sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="text-white">Start New Trade</DialogTitle>
+            <DialogDescription className="text-white/70">
+              Propose a secure trade to start chatting with this seller.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name" className="text-white">Item Name</Label>
+              <Input
+                id="name"
+                value={tradeData.name}
+                onChange={(e) => setTradeData(prev => ({ ...prev, name: e.target.value }))}
+                className="bg-black/50 border-white/10 text-white"
+                placeholder="e.g. Services, Digital Goods"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="price" className="text-white">Price (SOL)</Label>
+              <Input
+                id="price"
+                type="number"
+                step="0.000000001"
+                value={tradeData.price}
+                onChange={(e) => setTradeData(prev => ({ ...prev, price: e.target.value }))}
+                className="bg-black/50 border-white/10 text-white"
+                placeholder="0.0"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="description" className="text-white">Description (Optional)</Label>
+              <Textarea
+                id="description"
+                value={tradeData.description}
+                onChange={(e) => setTradeData(prev => ({ ...prev, description: e.target.value }))}
+                className="bg-black/50 border-white/10 text-white min-h-[80px]"
+                placeholder="Details about the agreement..."
+              />
             </div>
           </div>
-        </div>
-        
-        <Button onClick={handleStartTrade} className="bg-green-600 hover:bg-green-700 text-white gap-2 shadow-lg shadow-green-900/20">
-          <ShieldCheck className="w-4 h-4" />
-          Start Secure Trade
-        </Button>
-      </div>
-
-      {/* Main Chat Area */}
-      <div className="flex-1 flex gap-6 overflow-hidden">
-        {/* Chat Window */}
-        <div className="flex-1 flex flex-col bg-[#020817]/50 border border-white/10 rounded-2xl overflow-hidden backdrop-blur-sm">
-            <ScrollArea className="flex-1 p-6">
-                <div className="space-y-4">
-                    {messages.map((msg) => (
-                        <div key={msg.id} className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}>
-                            <div className={`max-w-[70%] rounded-2xl px-4 py-3 ${
-                                msg.sender === 'me' 
-                                ? 'bg-primary text-white rounded-br-none' 
-                                : 'bg-white/10 text-white rounded-bl-none'
-                            }`}>
-                                <p className="text-sm">{msg.content}</p>
-                                <span className="text-[10px] opacity-50 mt-1 block text-right">
-                                    {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </span>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </ScrollArea>
-            
-            <div className="p-4 bg-white/5 border-t border-white/10">
-                <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}>
-                    <Input 
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        placeholder="Type your message..." 
-                        className="bg-[#020817] border-white/10 text-white focus:border-primary"
-                    />
-                    <Button type="submit" size="icon" className="bg-primary hover:bg-primary/90 text-white">
-                        <Send className="w-5 h-5" />
-                    </Button>
-                </form>
-            </div>
-        </div>
-
-        {/* Trade Details Sidebar (Optional/Responsive) */}
-        <div className="hidden lg:block w-80 bg-white/5 border border-white/10 rounded-2xl p-6 h-fit">
-            <h3 className="font-bold text-white mb-4 flex items-center gap-2">
-                <DollarSign className="w-5 h-5 text-green-400" />
-                Active Trade
-            </h3>
-            <div className="text-sm text-center py-10 text-muted-foreground border-2 border-dashed border-white/10 rounded-xl">
-                No active trade yet.
-                <br />
-                <Button variant="link" onClick={handleStartTrade} className="text-blue-400">Initiate one now</Button>
-            </div>
-        </div>
-      </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setShowCreateTrade(false)} className="text-white hover:bg-white/10">
+              Cancel
+            </Button>
+            <Button onClick={handleCreateTrade} disabled={isCreating} className="bg-primary hover:bg-primary/90 text-white">
+              {isCreating ? 'Creating...' : 'Start Trade'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -99,7 +99,7 @@ class WebSocketServer {
       // Send message
       socket.on('send_message', async (data) => {
         try {
-          const { conversationId, recipientAddress, messageText, encryptedMessage, encryptionMetadata } = data;
+          const { conversationId, recipientAddress, messageText, encryptedMessage, encryptionMetadata, tradeId } = data;
 
           if (!conversationId || !recipientAddress) {
             socket.emit('error', { message: 'conversationId and recipientAddress are required' });
@@ -111,23 +111,22 @@ class WebSocketServer {
             return;
           }
 
-          // Verify user can access this conversation
+          // Determine if conversation exists
           const conversation = this.db.getConversation(conversationId);
-          if (!this.messageManager.canAccessConversation(conversation, solanaAddress)) {
-            socket.emit('error', { message: 'Access denied to this conversation' });
-            return;
-          }
-
-          // Verify sender is part of conversation
-          const isSender = conversation.buyer_address?.toLowerCase() === solanaAddress.toLowerCase() ||
-                          conversation.seller_address?.toLowerCase() === solanaAddress.toLowerCase();
           
-          if (!isSender) {
-            socket.emit('error', { message: 'You are not part of this conversation' });
-            return;
+          // If conversation exists, verify access
+          if (conversation) {
+              if (!this.messageManager.canAccessConversation(conversation, solanaAddress)) {
+                socket.emit('error', { message: 'Access denied to this conversation' });
+                return;
+              }
+          } else {
+             // New conversation? We could verify ID format here or let sendMessage handle it.
+             // We'll proceed and let messageManager handle creation.
           }
 
           // Send message
+          console.log(`[WS] Sending message from ${solanaAddress} to ${recipientAddress}`);
           const isEncrypted = !!encryptedMessage;
           const message = await this.messageManager.sendMessage(
             solanaAddress,
@@ -135,8 +134,11 @@ class WebSocketServer {
             messageText || '',
             isEncrypted,
             encryptedMessage,
-            encryptionMetadata
+            encryptionMetadata,
+            tradeId
           );
+
+          console.log(`[WS] Message saved, emitting to room ${conversationId}`);
 
           // Emit to all participants in the conversation room
           this.io.to(conversationId).emit('message_received', {
@@ -149,7 +151,7 @@ class WebSocketServer {
               encryptedMessage: message.encryptedMessage,
               encryptionMetadata: message.encryptionMetadata,
               isEncrypted: message.isEncrypted,
-              createdAt: message.created_at,
+              createdAt: message.createdAt || message.created_at,
             },
           });
 

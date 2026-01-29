@@ -112,6 +112,7 @@ class DatabaseManager {
         buyer_address TEXT NOT NULL,
         seller_address TEXT NOT NULL,
         last_message_at TIMESTAMP,
+        last_message_text TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (buyer_address) REFERENCES wallets (solana_address),
         FOREIGN KEY (seller_address) REFERENCES wallets (solana_address)
@@ -240,7 +241,8 @@ class DatabaseManager {
   }
 
   getWallet(solanaAddress) {
-    const result = this.stmtGetWallet.get(solanaAddress);
+    const address = solanaAddress.toLowerCase();
+    const result = this.stmtGetWallet.get(address);
     if (!result) {
       throw new Error('No wallet found for this user');
     }
@@ -261,8 +263,64 @@ class DatabaseManager {
     };
   }
 
+  getAllSellers() {
+    try {
+      console.log('Executing getAllSellers query...');
+      const sellers = this.db.prepare("SELECT * FROM wallets WHERE user_type = 'Seller' OR user_type = 'seller'").all();
+      
+      // Get trade statistics for all sellers
+      const tradeStats = this.db.prepare(`
+        SELECT 
+            seller_address,
+            COUNT(*) as total_finalized,
+            SUM(CASE WHEN status IN ('RELEASED', 'SUCCESS') THEN 1 ELSE 0 END) as successful
+        FROM trades 
+        WHERE status IN ('RELEASED', 'SUCCESS', 'CANCELLED', 'REJECTED')
+        GROUP BY seller_address
+      `).all();
+
+      // Create a map for quick lookup
+      const statsMap = {};
+      tradeStats.forEach(stat => {
+        statsMap[stat.seller_address.toLowerCase()] = stat;
+      });
+
+      console.log(`Found ${sellers.length} sellers to process`);
+      
+      return sellers.map(result => {
+        let walletData = {};
+        try {
+            walletData = this.decryptData(result.encrypted_data);
+        } catch (e) {
+            console.warn(`Failed to decrypt data for ${result.solana_address}`);
+        }
+
+        const address = result.solana_address.toLowerCase();
+        const stats = statsMap[address] || { total_finalized: 0, successful: 0 };
+        
+        let completionRate = 100; // Default for new sellers
+        if (stats.total_finalized > 0) {
+            completionRate = Math.round((stats.successful / stats.total_finalized) * 100);
+        }
+
+        return {
+            address: result.solana_address,
+            name: walletData.name || result.solana_address.slice(0, 4) + '..' + result.solana_address.slice(-4),
+            userType: 'Seller',
+            reputation: 5, // Keep mock for now
+            dealCount: stats.successful || 0,
+            completionRate: completionRate,
+            verified: true // Keep for legacy, but UI will prefer completionRate
+        };
+      });
+    } catch (error) {
+      console.error('Error getting all sellers:', error);
+      return [];
+    }
+  }
+
   walletExists(solanaAddress) {
-    const result = this.stmtWalletExists.get(solanaAddress);
+    const result = this.stmtWalletExists.get(solanaAddress.toLowerCase());
     return !!result;
   }
 
@@ -286,7 +344,7 @@ class DatabaseManager {
         treasuryWallet || null,
         publicKey || null,
         secretKey || null,
-        solanaAddress
+        solanaAddress.toLowerCase()
       );
       return true;
     } catch (error) {
@@ -367,16 +425,25 @@ class DatabaseManager {
   }
 
   // Conversation methods
-  createConversation(conversationId, buyerAddress, sellerAddress) {
+  createConversation(conversationId, buyerAddress, sellerAddress, lastMessageText = '') {
     try {
+      const b = buyerAddress.toLowerCase();
+      const s = sellerAddress.toLowerCase();
       const stmt = this.db.prepare(`
-        INSERT INTO conversations (conversation_id, buyer_address, seller_address, last_message_at)
-        VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+        INSERT INTO conversations (conversation_id, buyer_address, seller_address, last_message_at, last_message_text)
+        VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?)
         ON CONFLICT(conversation_id) DO UPDATE SET
-          last_message_at = CURRENT_TIMESTAMP
+          last_message_at = CURRENT_TIMESTAMP,
+          last_message_text = excluded.last_message_text
       `);
-      stmt.run(conversationId, buyerAddress, sellerAddress);
-      return { conversationId, buyerAddress, sellerAddress };
+      stmt.run(conversationId, b, s, lastMessageText);
+      return { 
+        conversation_id: conversationId, 
+        buyer_address: b, 
+        seller_address: s, 
+        last_message_text: lastMessageText,
+        last_message_at: new Date().toISOString() // Approximate or fetch from DB
+      };
     } catch (error) {
       console.error('Error creating conversation:', error);
       throw error;
@@ -395,25 +462,28 @@ class DatabaseManager {
 
   getUserConversations(solanaAddress) {
     try {
+      const address = solanaAddress.toLowerCase();
       const stmt = this.db.prepare(`
         SELECT * FROM conversations 
         WHERE buyer_address = ? OR seller_address = ?
         ORDER BY last_message_at DESC
       `);
-      return stmt.all(solanaAddress, solanaAddress);
+      return stmt.all(address, address);
     } catch (error) {
       console.error('Error getting user conversations:', error);
       return [];
     }
   }
 
-  updateConversationLastMessage(conversationId) {
+  updateConversationLastMessage(conversationId, lastMessageText = '') {
     try {
       const stmt = this.db.prepare(`
-        UPDATE conversations SET last_message_at = CURRENT_TIMESTAMP 
+        UPDATE conversations SET 
+          last_message_at = CURRENT_TIMESTAMP,
+          last_message_text = ?
         WHERE conversation_id = ?
       `);
-      stmt.run(conversationId);
+      stmt.run(lastMessageText, conversationId);
       return true;
     } catch (error) {
       console.error('Error updating conversation:', error);
@@ -432,8 +502,8 @@ class DatabaseManager {
       `);
       const info = stmt.run(
         messageData.conversationId,
-        messageData.senderAddress,
-        messageData.recipientAddress,
+        messageData.senderAddress.toLowerCase(),
+        messageData.recipientAddress.toLowerCase(),
         messageData.messageText || '',
         messageData.encryptedMessage || null,
         messageData.encryptionMetadata || null,
@@ -474,8 +544,8 @@ class DatabaseManager {
       stmt.run(
         tradeData.tradeId,
         tradeData.conversationId || null,
-        tradeData.sellerAddress,
-        tradeData.buyerAddress,
+        tradeData.sellerAddress.toLowerCase(),
+        tradeData.buyerAddress.toLowerCase(),
         tradeData.itemName,
         tradeData.description || null,
         tradeData.priceSol,
@@ -501,12 +571,13 @@ class DatabaseManager {
 
   getTradesForUser(solanaAddress) {
     try {
+      const address = solanaAddress.toLowerCase();
       const stmt = this.db.prepare(`
         SELECT * FROM trades
         WHERE buyer_address = ? OR seller_address = ?
         ORDER BY created_at DESC
       `);
-      return stmt.all(solanaAddress, solanaAddress);
+      return stmt.all(address, address);
     } catch (error) {
       console.error('Error getting trades for user:', error);
       return [];
