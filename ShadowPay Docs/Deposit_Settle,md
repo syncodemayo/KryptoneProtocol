@@ -1,0 +1,202 @@
+Detailed Flow for Deposit and Settle in ShadowPay (Radr Labs - Current Version)
+
+ShadowPay is a ZK-powered private payment protocol on Solana, using a hybrid model: Deposits go into a shared privacy pool for mixing/anonymity, then funds are auto-allocated to per-user escrow PDAs (program-derived addresses) for settlements. This breaks links between deposits and payments.
+
+Privacy features:
+
+    Sender identity hidden via ShadowID commitments.
+    Amounts encrypted (ElGamal).
+    ZK proofs (Groth16) verify validity without revealing details.
+
+Base URL: https://shadow.radr.fun/shadowpay
+
+All amounts in lamports for deposits (1 SOL = 1,000,000,000 lamports); SOL strings for payments.
+Prerequisites
+
+    Solana wallet (e.g., Phantom).
+    Load client SDK for ZK proof generation:
+
+    <script src="https://unpkg.com/@solana/web3.js@latest"></script>
+    <script src="https://unpkg.com/snarkjs@latest"></script>
+    <script src="https://shadow.radr.fun/shadowpay/shadowpay-client.js"></script>
+
+    const shadowPay = new ShadowPayPayClient();  // Or similar; check SDK for exact
+    await shadowPay.initialize();  // Loads ZK circuits, ~5-10s
+
+    Network: Solana mainnet (test on devnet if available).
+
+Step 1: Generate API Key (Authentication for Settle)
+
+    Endpoint: POST /v1/keys/new
+    Headers: Content-Type: application/json
+    Request Body:
+
+    {
+      "wallet_address": "YOUR_SOLANA_WALLET_BASE58"
+    }
+
+    Response: { "api_key": "YOUR_API_KEY_STRING" } (save securely).
+    Use in X-API-Key header for /settle.
+
+Step 2: ShadowID Auto-Registration (Required for Privacy)
+
+    Endpoint: POST /api/shadowid/auto-register
+    Headers: Content-Type: application/json
+    No API key needed (signature proves ownership).
+    Prepare Signed Message (client-side):
+
+    const message = "ShadowPay Registration...";  // Exact string from SDK/docs
+    const encoded = new TextEncoder().encode(message);
+    const signed = await window.solana.signMessage(encoded, "utf8");
+    const signature = Buffer.from(signed.signature).toString("base58");  // Or base64 if required
+
+    Request Body:
+
+    {
+      "wallet_address": "YOUR_WALLET",
+      "signature": "SIGNED_BASE58_OR_BASE64",
+      "message": "ShadowPay Registration..."
+    }
+
+    Response: Confirmation + senderCommitment (used in proofs).
+    Done once per wallet.
+
+Step 3: Deposit to Privacy Pool
+
+    Endpoint: POST /api/pool/deposit
+    Headers: Content-Type: application/json (API key may be optional here).
+    Request Body:
+
+    {
+      "wallet": "YOUR_SOLANA_WALLET_BASE58",
+      "amount": 50000000  // Integer lamports (e.g., 0.05 SOL)
+    }
+
+    Response: Typically { "transaction": "BASE64_UNSIGNED_TX" }.
+    Sign & Submit (client-side):
+
+    const tx = Transaction.from(Buffer.from(data.transaction, "base64"));
+    const signedTx = await window.solana.signTransaction(tx);
+    const connection = new Connection("https://api.mainnet-beta.solana.com");
+    const sig = await connection.sendRawTransaction(signedTx.serialize());
+    await connection.confirmTransaction(sig);
+
+    Success:
+        Funds enter shared privacy pool (mixed).
+        Auto-allocated to your escrow PDA for payments.
+        First deposit: ~0.002 SOL rent (reclaimable).
+        Tx fee: Tiny (~0.000005 SOL) from wallet.
+    Balance: No direct API listed; check via escrow PDA on-chain or app tracking.
+
+Step 4: Settle (Private Payment Release)
+
+This deducts from your escrow (funded from pool) and pays recipient privately.
+
+    Client-Side ZK Proof Generation (before API call):
+
+    const proofData = await shadowPay.generatePaymentProof({
+      payerWallet: "YOUR_WALLET",
+      payee: "RECIPIENT_WALLET",
+      amountLamports: AMOUNT,
+      resource: "DESCRIPTION_OR_URL"  // e.g., "Escrow release for deal #123"
+    });
+    // Outputs: proof, public signals, encrypted amount, etc.
+    // Often base64-encoded into paymentHeader
+
+    Endpoint: POST /settle
+    Headers:
+        Content-Type: application/json
+        X-API-Key: YOUR_API_KEY (required)
+    Request Body (complex; SDK formats much of this):
+
+    {
+      "x402Version": 1,
+      "paymentHeader": "BASE64_ENCODED_ZK_PROOF_AND_DATA",  // From client generation
+      "resource": "DESCRIPTION_OR_URL",
+      "paymentRequirements": {
+        "scheme": "zkproof",
+        "network": "solana-mainnet",
+        "maxAmountRequired": "0.001",  // SOL as string (max deductible)
+        "resource": "DESCRIPTION",
+        "description": "Payment for access/escrow release",
+        "mimeType": "application/json",  // Or relevant
+        "payTo": "RECIPIENT_WALLET_BASE58",
+        "maxTimeoutSeconds": 300
+      }
+    }
+
+    Response: { "status": "success", "txSignature": "ON_CHAIN_SIG" } (or error).
+    What Happens on Success:
+        Relayer verifies ZK proof.
+        Deducts amount + tiny fee (~0.0001 SOL) from your escrow (sourced from pool).
+        Transfers to recipient (payTo).
+        On-chain tx hides sender and amount.
+        Gasless for you (relayer pays priority fees).
+
+Full Deposit → Settle Flow Summary
+
+    Generate API key.
+    Register ShadowID.
+    Deposit to pool → Funds mixed → Auto to escrow.
+    (For payment) Generate ZK proof client-side (proves sufficient balance, valid deduction).
+    Submit proof + details to /settle.
+    Relayer executes private transfer.
+
+
+Yes, there is an API to check/verify a user's deposit balance, which can be integrated on the seller's side (e.g., in your backend or app dashboard). This allows the seller to confirm the buyer has deposited sufficient funds into the privacy pool/escrow before shipping goods.
+Key Endpoint for Balance Verification
+
+Endpoint: GET https://shadow.radr.fun/shadowpay/api/pool/balance/{wallet}
+Replace {wallet} with the buyer's Solana wallet address (Base58 string).
+Method: GET
+Authentication: Not required (public query based on available docs).
+Response (expected):JSON{
+  "balance": "0.05",  // Balance in SOL (string or number)
+  "wallet": "BUYER_WALLET_ADDRESS"
+}
+Or similar format (may return in lamports; test to confirm).
+If no deposit/escrow exists: May return 0 or 404-equivalent.
+
+
+Alternative/Older Variant (if pool endpoint not active):
+GET https://shadow.radr.fun/shadowpay/api/escrow/balance/:wallet
+Same purpose; some docs reference this for escrow balance.
+
+
+Integration on Seller's Side
+
+During Deal Setup:
+Buyer shares their wallet address off-chain (e.g., via your app chat, deal page, or after agreeing on amount).
+This is common in escrow flows—even with privacy, the deposit verification phase often requires the wallet for confirmation.
+
+Seller-Side Check (e.g., backend code):JavaScriptconst buyerWallet = "BUYER_SHARED_WALLET_ADDRESS";
+const requiredAmountSol = 0.05;  // Deal amount
+
+const response = await fetch(`https://shadow.radr.fun/shadowpay/api/pool/balance/${buyerWallet}`);
+const data = await response.json();
+
+if (parseFloat(data.balance) >= requiredAmountSol) {
+  console.log("Deposit verified! Sufficient funds.");
+  // Proceed: Mark deal as funded, ship goods
+} else {
+  console.log("Insufficient deposit.");
+  // Notify buyer to deposit more
+}
+Flow in Your Escrow System:
+Buyer deposits via /api/pool/deposit (funds go to shared pool → auto-allocated to their escrow).
+Buyer shares wallet (or deposit tx signature for on-chain confirmation).
+Seller queries balance API → Confirms >= deal amount.
+Ship goods offline.
+Buyer settles privately via /settle (hides their address/amount; seller receives funds).
+If dispute: Buyer withdraws (via /api/pool/withdraw).
+
+
+Important Notes
+
+Privacy Trade-Off: Querying balance requires knowing the buyer's wallet. Once settled, the payment is fully private (seller won't see the sender link on-chain).
+No Third-Party Lock: Funds are buyer-controlled (they can withdraw anytime before settle). This is buyer-protected escrow—seller relies on trust/reputation for release.
+No Anonymous Verification Endpoint: There is no documented API for verifying deposits without the wallet address (due to privacy design). No ZK-based pre-commitment proof for balance without revealing wallet.
+Testing: Call the endpoint directly in browser/console with a known wallet that has deposited. Use small test deposits.
+If Evolved: The pool system is current; if balance endpoint requires auth (e.g., your API key), add X-API-Key header.
+
+This enables seller-side deposit confirmation without full anonymity during the hold phase. If the buyer refuses to share wallet, alternatives are limited (e.g., trust-based or share deposit tx sig for manual explorer check). Let me know if you test the endpoint and share results!

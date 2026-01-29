@@ -1,19 +1,43 @@
 import express from 'express';
+import { createServer } from 'http';
 import dotenv from 'dotenv';
-import { PublicKey } from '@solana/web3.js';
+import { PublicKey, Connection } from '@solana/web3.js';
+import { randomUUID } from 'crypto';
 import jwt from 'jsonwebtoken';
 import nacl from 'tweetnacl';
 import bs58 from 'bs58';
 import cors from 'cors';
 import DatabaseManager from './db_manager.js';
+import WebSocketServer from './websocket_server.js';
+import MessageManager from './message_manager.js';
 
 dotenv.config();
 
 const app = express();
+const httpServer = createServer(app);
 const port = process.env.PORT || 5001;
+
+const TRADE_STATUSES = {
+  PENDING: 'PENDING',
+  ACCEPTED: 'ACCEPTED',
+  REJECTED: 'REJECTED',
+  CANCELLED: 'CANCELLED',
+  DEPOSIT_PENDING: 'DEPOSIT_PENDING',
+  DEPOSIT_CONFIRMED: 'DEPOSIT_CONFIRMED',
+  SETTLE_PENDING: 'SETTLE_PENDING',
+  SUCCESS: 'SUCCESS',
+};
+
+const LAMPORTS_PER_SOL = 1_000_000_000;
 
 // Initialize database
 const db = new DatabaseManager();
+
+// Initialize message manager
+const messageManager = new MessageManager(db);
+
+// Initialize WebSocket server
+const wsServer = new WebSocketServer(httpServer, db);
 
 // Middleware to parse JSON
 app.use(express.json());
@@ -40,6 +64,17 @@ function verifySolanaSignature(message, signature, address) {
     console.error('Error verifying Solana signature:', error);
     return false;
   }
+}
+
+function parsePriceInSol(priceInSol) {
+  const value = Number.parseFloat(priceInSol);
+  if (!Number.isFinite(value) || value <= 0) {
+    return null;
+  }
+  return {
+    priceSol: value.toString(),
+    priceLamports: Math.round(value * LAMPORTS_PER_SOL),
+  };
 }
 
 // ===== PUBLIC ENDPOINTS =====
@@ -226,14 +261,8 @@ app.get('/api/user/info', async (req, res) => {
       shadowPay.userType = wallet?.userType || null;
       shadowPay.commitment = wallet?.commitment || null;
       shadowPay.root = wallet?.root || null;
-
-      // Add Seller-specific fields (excluding secret_key for security)
-      if (wallet?.userType === 'Seller') {
-        shadowPay.api_key = wallet?.apiKey || null;
-        shadowPay.treasury_wallet = wallet?.treasuryWallet || null;
-        shadowPay.public_key = wallet?.publicKey || null;
-        // Note: secret_key is stored but never returned in API responses
-      }
+      shadowPay.api_key = wallet?.apiKey || null;
+      // Note: treasury_wallet, public_key, secret_key are no longer populated
     }
     
     res.json({
@@ -275,8 +304,39 @@ app.post('/api/user/register-shadowpay', async (req, res) => {
       });
     }
 
-    // Call ShadowPay API
     try {
+      // Step 1: Generate API key for all users
+      const keysResponse = await fetch(
+        'https://shadow.radr.fun/shadowpay/v1/keys/new',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            wallet_address: solanaAddress,
+          }),
+        }
+      );
+
+      if (!keysResponse.ok) {
+        const errorText = await keysResponse.text();
+        console.error('ShadowPay keys/new API error:', errorText);
+        return res.status(500).json({
+          error: 'Failed to generate API key. Please try again.',
+        });
+      }
+
+      const keysData = await keysResponse.json();
+
+      if (!keysData.api_key) {
+        console.error('Invalid keys/new response:', keysData);
+        return res.status(500).json({
+          error: 'Invalid response from ShadowPay keys service.',
+        });
+      }
+
+      // Step 2: Register with ShadowID
       const shadowPayResponse = await fetch(
         'https://shadow.radr.fun/shadowpay/api/shadowid/auto-register',
         {
@@ -315,84 +375,8 @@ app.post('/api/user/register-shadowpay', async (req, res) => {
         userType: userType,
         commitment: shadowPayData.commitment,
         root: shadowPayData.root,
+        apiKey: keysData.api_key,
       };
-
-      // Seller-specific API calls
-      if (userType === 'Seller') {
-        try {
-          // Call keys/new API for Seller
-          const keysResponse = await fetch(
-            'https://shadow.radr.fun/shadowpay/v1/keys/new',
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                wallet_address: solanaAddress,
-              }),
-            }
-          );
-
-          if (!keysResponse.ok) {
-            const errorText = await keysResponse.text();
-            console.error('ShadowPay keys/new API error:', errorText);
-            return res.status(500).json({
-              error: 'Failed to generate API keys for Seller. Please try again.',
-            });
-          }
-
-          const keysData = await keysResponse.json();
-
-          // Validate keys response structure
-          if (!keysData.api_key || !keysData.treasury_wallet) {
-            console.error('Invalid keys/new response:', keysData);
-            return res.status(500).json({
-              error: 'Invalid response from ShadowPay keys service.',
-            });
-          }
-
-          registrationData.apiKey = keysData.api_key;
-          registrationData.treasuryWallet = keysData.treasury_wallet;
-
-          // Call keygen API for Seller
-          const keygenResponse = await fetch(
-            'https://shadow.radr.fun/shadowpay/api/privacy/keygen',
-            {
-              method: 'GET',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-            }
-          );
-
-          if (!keygenResponse.ok) {
-            const errorText = await keygenResponse.text();
-            console.error('ShadowPay keygen API error:', errorText);
-            return res.status(500).json({
-              error: 'Failed to generate privacy keys for Seller. Please try again.',
-            });
-          }
-
-          const keygenData = await keygenResponse.json();
-
-          // Validate keygen response structure
-          if (!keygenData.public_key || !keygenData.secret_key) {
-            console.error('Invalid keygen response:', keygenData);
-            return res.status(500).json({
-              error: 'Invalid response from ShadowPay keygen service.',
-            });
-          }
-
-          registrationData.publicKey = keygenData.public_key;
-          registrationData.secretKey = keygenData.secret_key;
-        } catch (sellerApiError) {
-          console.error('Error calling Seller-specific ShadowPay APIs:', sellerApiError);
-          return res.status(500).json({
-            error: 'Failed to complete Seller registration. Please try again later.',
-          });
-        }
-      }
 
       // Update database with ShadowPay registration data
       const updateSuccess = db.updateShadowPayRegistration(solanaAddress, registrationData);
@@ -404,25 +388,15 @@ app.post('/api/user/register-shadowpay', async (req, res) => {
         });
       }
 
-      // Build response
-      const response = {
+      res.json({
         success: true,
         registered: true,
         commitment: shadowPayData.commitment,
         root: shadowPayData.root,
         userType: userType,
+        api_key: keysData.api_key,
         message: 'Successfully registered with ShadowPay',
-      };
-
-      // Add Seller-specific fields to response
-      if (userType === 'Seller') {
-        response.api_key = registrationData.apiKey;
-        response.treasury_wallet = registrationData.treasuryWallet;
-        response.public_key = registrationData.publicKey;
-        // Note: secret_key is NOT included in response for security
-      }
-
-      res.json(response);
+      });
     } catch (fetchError) {
       console.error('Error calling ShadowPay API:', fetchError);
       return res.status(500).json({
@@ -437,10 +411,762 @@ app.post('/api/user/register-shadowpay', async (req, res) => {
   }
 });
 
+// ===== MESSAGING REST ENDPOINTS =====
+
+// Get user's conversations
+app.get('/api/conversations', async (req, res) => {
+  try {
+    const conversations = db.getUserConversations(req.solanaAddress);
+    
+    res.json({
+      success: true,
+      conversations: conversations.map(conv => ({
+        conversationId: conv.conversation_id,
+        buyerAddress: conv.buyer_address,
+        sellerAddress: conv.seller_address,
+        lastMessageAt: conv.last_message_at,
+        createdAt: conv.created_at,
+      })),
+    });
+  } catch (error) {
+    console.error('Error getting conversations:', error);
+    res.status(500).json({ error: 'Failed to get conversations.' });
+  }
+});
+
+// Create/start conversation with seller
+app.post('/api/conversations', async (req, res) => {
+  try {
+    const { sellerAddress } = req.body;
+    const buyerAddress = req.solanaAddress;
+
+    if (!sellerAddress) {
+      return res.status(400).json({ error: 'sellerAddress is required.' });
+    }
+
+    // Verify seller is a Seller
+    if (!db.isSeller(sellerAddress)) {
+      return res.status(400).json({ 
+        error: 'Recipient must be a registered Seller.',
+        code: 'NOT_A_SELLER',
+      });
+    }
+
+    // Create or get conversation
+    const conversation = await messageManager.createOrGetConversation(buyerAddress, sellerAddress);
+
+    res.json({
+      success: true,
+      conversationId: conversation.conversation_id,
+      buyerAddress: conversation.buyer_address,
+      sellerAddress: conversation.seller_address,
+      createdAt: conversation.created_at,
+    });
+  } catch (error) {
+    console.error('Error creating conversation:', error);
+    res.status(500).json({ error: error.message || 'Failed to create conversation.' });
+  }
+});
+
+// Get conversation details
+app.get('/api/conversations/:conversationId', async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const conversation = db.getConversation(conversationId);
+
+    if (!conversation) {
+      return res.status(404).json({ error: 'Conversation not found.' });
+    }
+
+    // Verify user can access this conversation
+    if (!messageManager.canAccessConversation(conversation, req.solanaAddress)) {
+      return res.status(403).json({ error: 'Access denied to this conversation.' });
+    }
+
+    res.json({
+      success: true,
+      conversation: {
+        conversationId: conversation.conversation_id,
+        buyerAddress: conversation.buyer_address,
+        sellerAddress: conversation.seller_address,
+        lastMessageAt: conversation.last_message_at,
+        createdAt: conversation.created_at,
+      },
+    });
+  } catch (error) {
+    console.error('Error getting conversation:', error);
+    res.status(500).json({ error: 'Failed to get conversation.' });
+  }
+});
+
+// Get message history
+app.get('/api/conversations/:conversationId/messages', async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const limit = Number.parseInt(req.query.limit, 10) || 50;
+    const offset = Number.parseInt(req.query.offset, 10) || 0;
+
+    // Verify conversation exists
+    const conversation = db.getConversation(conversationId);
+    if (!conversation) {
+      return res.status(404).json({ error: 'Conversation not found.' });
+    }
+
+    // Verify user can access this conversation
+    if (!messageManager.canAccessConversation(conversation, req.solanaAddress)) {
+      return res.status(403).json({ error: 'Access denied to this conversation.' });
+    }
+
+    const messages = messageManager.getMessageHistory(conversationId, limit, offset);
+
+    res.json({
+      success: true,
+      conversationId,
+      messages,
+      limit,
+      offset,
+    });
+  } catch (error) {
+    console.error('Error getting message history:', error);
+    res.status(500).json({ error: 'Failed to get message history.' });
+  }
+});
+
+// ===== TRADE ENDPOINTS =====
+
+// Seller creates a trade
+app.post('/api/trades', async (req, res) => {
+  try {
+    const { itemName, description, priceInSol, buyerWallet, conversationId } = req.body;
+    const sellerAddress = req.solanaAddress;
+
+    if (!itemName || !priceInSol || !buyerWallet) {
+      return res.status(400).json({
+        error: 'Missing required fields: itemName, priceInSol, buyerWallet.',
+      });
+    }
+
+    if (!db.isSeller(sellerAddress)) {
+      return res.status(403).json({
+        error: 'Only Sellers can create trades.',
+      });
+    }
+
+    if (!db.walletExists(buyerWallet)) {
+      return res.status(400).json({
+        error: 'Buyer wallet is not registered.',
+      });
+    }
+
+    const priceData = parsePriceInSol(priceInSol);
+    if (!priceData) {
+      return res.status(400).json({ error: 'Invalid priceInSol value.' });
+    }
+
+    if (conversationId) {
+      const conversation = db.getConversation(conversationId);
+      if (!conversation) {
+        return res.status(400).json({ error: 'Conversation not found.' });
+      }
+      const sellerMatch = conversation.seller_address?.toLowerCase() === sellerAddress.toLowerCase();
+      const buyerMatch = conversation.buyer_address?.toLowerCase() === buyerWallet.toLowerCase();
+      if (!sellerMatch || !buyerMatch) {
+        return res.status(400).json({
+          error: 'Conversation does not match buyer/seller.',
+        });
+      }
+    }
+
+    const trade = db.createTrade({
+      tradeId: `trade_${randomUUID()}`,
+      conversationId: conversationId || null,
+      sellerAddress,
+      buyerAddress: buyerWallet,
+      itemName,
+      description: description || null,
+      priceSol: priceData.priceSol,
+      priceLamports: priceData.priceLamports,
+      status: TRADE_STATUSES.PENDING,
+    });
+
+    res.json({
+      success: true,
+      trade: {
+        tradeId: trade.trade_id,
+        conversationId: trade.conversation_id,
+        sellerAddress: trade.seller_address,
+        buyerAddress: trade.buyer_address,
+        itemName: trade.item_name,
+        description: trade.description,
+        priceInSol: trade.price_sol,
+        status: trade.status,
+        createdAt: trade.created_at,
+      },
+    });
+  } catch (error) {
+    console.error('Error creating trade:', error);
+    res.status(500).json({ error: 'Failed to create trade.' });
+  }
+});
+
+// Buyer accepts a trade and receives unsigned deposit transaction
+app.post('/api/trades/:tradeId/accept', async (req, res) => {
+  try {
+    const { tradeId } = req.params;
+    const buyerAddress = req.solanaAddress;
+
+    const trade = db.getTrade(tradeId);
+    if (!trade) {
+      return res.status(404).json({ error: 'Trade not found.' });
+    }
+
+    if (trade.buyer_address?.toLowerCase() !== buyerAddress.toLowerCase()) {
+      return res.status(403).json({ error: 'Only the buyer can accept this trade.' });
+    }
+
+    if (trade.status !== TRADE_STATUSES.PENDING) {
+      return res.status(400).json({ error: `Trade is not pending (current: ${trade.status}).` });
+    }
+
+    db.updateTradeStatus(tradeId, TRADE_STATUSES.ACCEPTED);
+
+    const depositResponse = await fetch('https://shadow.radr.fun/shadowpay/api/pool/deposit', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        wallet: buyerAddress,
+        amount: trade.price_lamports,
+      }),
+    });
+
+    if (!depositResponse.ok) {
+      const errorText = await depositResponse.text();
+      console.error('ShadowPay deposit API error:', errorText);
+      return res.status(500).json({ error: 'Failed to create deposit transaction.' });
+    }
+
+    const depositData = await depositResponse.json();
+    if (!depositData.transaction) {
+      return res.status(500).json({ error: 'Invalid deposit response from ShadowPay.' });
+    }
+
+    db.updateTradeStatus(tradeId, TRADE_STATUSES.DEPOSIT_PENDING);
+
+    res.json({
+      success: true,
+      tradeId: trade.trade_id,
+      status: TRADE_STATUSES.DEPOSIT_PENDING,
+      transaction: depositData.transaction,
+    });
+  } catch (error) {
+    console.error('Error accepting trade:', error);
+    res.status(500).json({ error: 'Failed to accept trade.' });
+  }
+});
+
+// Buyer submits deposit transaction signature
+app.post('/api/trades/:tradeId/deposit-signature', async (req, res) => {
+  try {
+    const { tradeId } = req.params;
+    const { txSignature } = req.body;
+    const buyerAddress = req.solanaAddress;
+
+    if (!txSignature) {
+      return res.status(400).json({ error: 'txSignature is required.' });
+    }
+
+    const trade = db.getTrade(tradeId);
+    if (!trade) {
+      return res.status(404).json({ error: 'Trade not found.' });
+    }
+
+    if (trade.buyer_address?.toLowerCase() !== buyerAddress.toLowerCase()) {
+      return res.status(403).json({ error: 'Only the buyer can submit a deposit signature.' });
+    }
+
+    if (trade.status !== TRADE_STATUSES.DEPOSIT_PENDING) {
+      return res.status(400).json({ error: `Trade is not awaiting deposit (current: ${trade.status}).` });
+    }
+
+    db.setTradeDepositSignature(tradeId, txSignature);
+
+    res.json({
+      success: true,
+      tradeId: trade.trade_id,
+      status: trade.status,
+      depositTxSignature: txSignature,
+    });
+  } catch (error) {
+    console.error('Error saving deposit signature:', error);
+    res.status(500).json({ error: 'Failed to save deposit signature.' });
+  }
+});
+
+// Buyer rejects a trade
+app.post('/api/trades/:tradeId/reject', async (req, res) => {
+  try {
+    const { tradeId } = req.params;
+    const buyerAddress = req.solanaAddress;
+
+    const trade = db.getTrade(tradeId);
+    if (!trade) {
+      return res.status(404).json({ error: 'Trade not found.' });
+    }
+
+    if (trade.buyer_address?.toLowerCase() !== buyerAddress.toLowerCase()) {
+      return res.status(403).json({ error: 'Only the buyer can reject this trade.' });
+    }
+
+    if (trade.status !== TRADE_STATUSES.PENDING && trade.status !== TRADE_STATUSES.ACCEPTED) {
+      return res.status(400).json({ error: `Trade cannot be rejected (current: ${trade.status}).` });
+    }
+
+    db.updateTradeStatus(tradeId, TRADE_STATUSES.REJECTED);
+
+    res.json({
+      success: true,
+      tradeId: trade.trade_id,
+      status: TRADE_STATUSES.REJECTED,
+    });
+  } catch (error) {
+    console.error('Error rejecting trade:', error);
+    res.status(500).json({ error: 'Failed to reject trade.' });
+  }
+});
+
+// Get trade status with payment verification
+app.get('/api/trades/:tradeId', async (req, res) => {
+  try {
+    const { tradeId } = req.params;
+    const requester = req.solanaAddress;
+
+    const trade = db.getTrade(tradeId);
+    if (!trade) {
+      return res.status(404).json({ error: 'Trade not found.' });
+    }
+
+    const isBuyer = trade.buyer_address?.toLowerCase() === requester.toLowerCase();
+    const isSeller = trade.seller_address?.toLowerCase() === requester.toLowerCase();
+    if (!isBuyer && !isSeller) {
+      return res.status(403).json({ error: 'Access denied to this trade.' });
+    }
+
+    let depositConfirmed = false;
+    let signatureConfirmed = null;
+    let balanceOk = null;
+
+    if (trade.deposit_tx_signature) {
+      if (process.env.ALCHEMY_RPC_URL) {
+        try {
+          const connection = new Connection(process.env.ALCHEMY_RPC_URL, 'confirmed');
+          const statusResponse = await connection.getSignatureStatuses([trade.deposit_tx_signature]);
+          const statusInfo = statusResponse?.value?.[0];
+          signatureConfirmed = !!statusInfo && !statusInfo.err;
+        } catch (error) {
+          console.error('Error checking deposit signature status:', error);
+        }
+      }
+
+      try {
+        const balanceResponse = await fetch(
+          `https://shadow.radr.fun/shadowpay/api/pool/balance/${trade.buyer_address}`
+        );
+        if (balanceResponse.ok) {
+          const balanceData = await balanceResponse.json();
+          const balanceValue = Number.parseFloat(balanceData.balance);
+          balanceOk = Number.isFinite(balanceValue) && balanceValue >= Number.parseFloat(trade.price_sol);
+        }
+      } catch (error) {
+        console.error('Error checking ShadowPay balance:', error);
+      }
+
+      const signatureCheck = signatureConfirmed === null ? true : signatureConfirmed;
+      if (signatureCheck && balanceOk) {
+        depositConfirmed = true;
+      }
+    }
+
+    if (depositConfirmed && trade.status === TRADE_STATUSES.DEPOSIT_PENDING) {
+      db.setTradeDepositConfirmed(trade.trade_id);
+    }
+
+    const updatedTrade = db.getTrade(trade.trade_id);
+
+    res.json({
+      success: true,
+      trade: {
+        tradeId: updatedTrade.trade_id,
+        conversationId: updatedTrade.conversation_id,
+        sellerAddress: updatedTrade.seller_address,
+        buyerAddress: updatedTrade.buyer_address,
+        itemName: updatedTrade.item_name,
+        description: updatedTrade.description,
+        priceInSol: updatedTrade.price_sol,
+        status: updatedTrade.status,
+        depositTxSignature: updatedTrade.deposit_tx_signature,
+        depositConfirmedAt: updatedTrade.deposit_confirmed_at,
+        settleTxSignature: updatedTrade.settle_tx_signature,
+        settledAt: updatedTrade.settled_at,
+        createdAt: updatedTrade.created_at,
+        updatedAt: updatedTrade.updated_at,
+      },
+      paymentStatus: {
+        signatureConfirmed,
+        balanceOk,
+        depositConfirmed,
+      },
+    });
+  } catch (error) {
+    console.error('Error getting trade status:', error);
+    res.status(500).json({ error: 'Failed to fetch trade status.' });
+  }
+});
+
+// Buyer settles a trade (release payment)
+app.post('/api/trades/:tradeId/settle', async (req, res) => {
+  try {
+    const { tradeId } = req.params;
+    const { paymentHeader, paymentRequirements, resource } = req.body;
+    const buyerAddress = req.solanaAddress;
+
+    if (!paymentHeader || !paymentRequirements || !resource) {
+      return res.status(400).json({
+        error: 'paymentHeader, paymentRequirements, and resource are required.',
+      });
+    }
+
+    const trade = db.getTrade(tradeId);
+    if (!trade) {
+      return res.status(404).json({ error: 'Trade not found.' });
+    }
+
+    if (trade.buyer_address?.toLowerCase() !== buyerAddress.toLowerCase()) {
+      return res.status(403).json({ error: 'Only the buyer can settle this trade.' });
+    }
+
+    if (trade.status !== TRADE_STATUSES.DEPOSIT_CONFIRMED) {
+      return res.status(400).json({ error: `Trade is not ready to settle (current: ${trade.status}).` });
+    }
+
+    const buyerWallet = db.getWallet(buyerAddress);
+    if (!buyerWallet?.apiKey) {
+      return res.status(400).json({ error: 'Buyer API key is missing. Re-register ShadowPay.' });
+    }
+
+    db.updateTradeStatus(tradeId, TRADE_STATUSES.SETTLE_PENDING);
+
+    const settleResponse = await fetch('https://shadow.radr.fun/shadowpay/settle', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': buyerWallet.apiKey,
+      },
+      body: JSON.stringify({
+        x402Version: 1,
+        paymentHeader,
+        resource,
+        paymentRequirements,
+      }),
+    });
+
+    if (!settleResponse.ok) {
+      const errorText = await settleResponse.text();
+      console.error('ShadowPay settle API error:', errorText);
+      return res.status(500).json({ error: 'Failed to settle trade.' });
+    }
+
+    const settleData = await settleResponse.json();
+    const txSignature = settleData.txSignature || settleData.signature || null;
+
+    db.setTradeSettled(tradeId, txSignature);
+
+    res.json({
+      success: true,
+      tradeId: trade.trade_id,
+      status: TRADE_STATUSES.SUCCESS,
+      txSignature,
+      settleResponse: settleData,
+    });
+  } catch (error) {
+    console.error('Error settling trade:', error);
+    res.status(500).json({ error: 'Failed to settle trade.' });
+  }
+});
+
+// ===== ENCRYPTION KEY ENDPOINTS =====
+
+// Store encryption keys (public + encrypted private for escrow)
+app.post('/api/user/encryption-key', async (req, res) => {
+  try {
+    const { publicKey, privateKey } = req.body;
+    const solanaAddress = req.solanaAddress;
+
+    if (!publicKey || !privateKey) {
+      return res.status(400).json({ 
+        error: 'publicKey and privateKey are required.' 
+      });
+    }
+
+    db.storeEncryptionKeys(solanaAddress, publicKey, privateKey);
+
+    res.json({
+      success: true,
+      message: 'Encryption keys stored successfully',
+    });
+  } catch (error) {
+    console.error('Error storing encryption keys:', error);
+    res.status(500).json({ error: 'Failed to store encryption keys.' });
+  }
+});
+
+// Get own public key
+app.get('/api/user/encryption-key', async (req, res) => {
+  try {
+    const publicKey = db.getPublicKey(req.solanaAddress);
+
+    res.json({
+      success: true,
+      publicKey: publicKey || null,
+    });
+  } catch (error) {
+    console.error('Error getting public key:', error);
+    res.status(500).json({ error: 'Failed to get public key.' });
+  }
+});
+
+// Get own decrypted private key (for client-side decryption)
+app.get('/api/user/encryption-key/private', async (req, res) => {
+  try {
+    const privateKey = db.getDecryptedPrivateKey(req.solanaAddress);
+
+    if (!privateKey) {
+      return res.status(404).json({ error: 'Encryption keys not found. Please generate keys first.' });
+    }
+
+    res.json({
+      success: true,
+      privateKey,
+    });
+  } catch (error) {
+    console.error('Error getting private key:', error);
+    res.status(500).json({ error: 'Failed to get private key.' });
+  }
+});
+
+// Get public key for a specific user (for sending encrypted messages)
+app.get('/api/user/encryption-key/:address', async (req, res) => {
+  try {
+    const { address } = req.params;
+    const publicKey = db.getPublicKey(address);
+
+    res.json({
+      success: true,
+      address,
+      publicKey: publicKey || null,
+    });
+  } catch (error) {
+    console.error('Error getting public key:', error);
+    res.status(500).json({ error: 'Failed to get public key.' });
+  }
+});
+
+// ===== ADMIN AUTHENTICATION MIDDLEWARE =====
+
+// Middleware to check if user is admin
+const adminAuthMiddleware = (req, res, next) => {
+  const solanaAddress = req.solanaAddress;
+  
+  // Get list of admin addresses from environment variable
+  // Format: comma-separated list of Solana addresses
+  const adminAddresses = process.env.ADMIN_ADDRESSES 
+    ? process.env.ADMIN_ADDRESSES.split(',').map(addr => addr.trim().toLowerCase())
+    : [];
+  
+  if (adminAddresses.length === 0) {
+    return res.status(500).json({ 
+      error: 'Admin access is not configured. Please set ADMIN_ADDRESSES environment variable.' 
+    });
+  }
+  
+  if (!solanaAddress || !adminAddresses.includes(solanaAddress.toLowerCase())) {
+    return res.status(403).json({ 
+      error: 'Access denied. Admin privileges required.' 
+    });
+  }
+  
+  next();
+};
+
+// ===== ADMIN ENDPOINTS =====
+
+// Decrypt messages for dispute resolution
+app.post('/api/admin/conversations/:conversationId/decrypt', adminAuthMiddleware, async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const { reason, disputeId } = req.body;
+    const adminAddress = req.solanaAddress;
+
+    // Get conversation
+    const conversation = db.getConversation(conversationId);
+    if (!conversation) {
+      return res.status(404).json({ error: 'Conversation not found.' });
+    }
+
+    // Get encrypted private keys for both participants
+    let buyerPrivateKey, sellerPrivateKey;
+    try {
+      buyerPrivateKey = db.decryptPrivateKeyForAdmin(conversation.buyer_address);
+      sellerPrivateKey = db.decryptPrivateKeyForAdmin(conversation.seller_address);
+    } catch (error) {
+      // If keys don't exist, that's okay - some messages might not be encrypted
+      buyerPrivateKey = null;
+      sellerPrivateKey = null;
+    }
+
+    // Get all messages
+    const messages = db.getMessages(conversationId, 10000, 0);
+
+    // Decrypt messages using tweetnacl
+    const decryptedMessages = messages.map(msg => {
+      const decrypted = {
+        id: msg.id,
+        conversationId: msg.conversation_id,
+        senderAddress: msg.sender_address,
+        recipientAddress: msg.recipient_address,
+        createdAt: msg.created_at,
+        readAt: msg.read_at,
+        isEncrypted: msg.is_encrypted === 1,
+      };
+
+      // If message is encrypted, try to decrypt it
+      if (msg.is_encrypted === 1 && msg.encrypted_message && msg.encryption_metadata) {
+        try {
+          const metadata = JSON.parse(msg.encryption_metadata);
+          const { encrypted, nonce, senderPublicKey } = metadata;
+
+          // Determine which private key to use based on sender
+          let recipientPrivateKey;
+          if (msg.sender_address.toLowerCase() === conversation.buyer_address.toLowerCase()) {
+            // Message from buyer, use seller's private key to decrypt
+            recipientPrivateKey = sellerPrivateKey;
+          } else {
+            // Message from seller, use buyer's private key to decrypt
+            recipientPrivateKey = buyerPrivateKey;
+          }
+
+          if (recipientPrivateKey && encrypted && nonce && senderPublicKey) {
+            try {
+              // Decode base64 strings
+              const encryptedBytes = Buffer.from(encrypted, 'base64');
+              const nonceBytes = Buffer.from(nonce, 'base64');
+              const senderPubKeyBytes = Buffer.from(senderPublicKey, 'base64');
+              const recipientPrivKeyBytes = Buffer.from(recipientPrivateKey, 'base64');
+
+              // Decrypt using tweetnacl box
+              const decryptedBytes = nacl.box.open(
+                encryptedBytes,
+                nonceBytes,
+                senderPubKeyBytes,
+                recipientPrivKeyBytes
+              );
+
+              if (decryptedBytes) {
+                decrypted.messageText = Buffer.from(decryptedBytes).toString('utf8');
+                decrypted.decryptionStatus = 'success';
+              } else {
+                decrypted.decryptionStatus = 'failed';
+                decrypted.error = 'Failed to decrypt message';
+              }
+            } catch (decryptError) {
+              decrypted.decryptionStatus = 'error';
+              decrypted.error = `Decryption error: ${decryptError.message}`;
+            }
+          } else {
+            decrypted.decryptionStatus = 'skipped';
+            decrypted.error = 'Missing decryption keys or metadata';
+          }
+        } catch (parseError) {
+          decrypted.decryptionStatus = 'error';
+          decrypted.error = `Failed to parse encryption metadata: ${parseError.message}`;
+        }
+      } else {
+        // Not encrypted, return plaintext
+        decrypted.messageText = msg.message_text;
+        decrypted.decryptionStatus = 'not_encrypted';
+      }
+
+      return decrypted;
+    });
+
+    // Count successfully decrypted messages
+    const decryptedCount = decryptedMessages.filter(
+      msg => msg.decryptionStatus === 'success' || msg.decryptionStatus === 'not_encrypted'
+    ).length;
+
+    // Log admin access
+    db.logAdminAccess({
+      conversationId,
+      adminAddress,
+      reason: reason || 'dispute_resolution',
+      disputeId: disputeId || null,
+      messagesDecrypted: decryptedCount,
+    });
+
+    res.json({
+      success: true,
+      conversationId,
+      messages: decryptedMessages,
+      decryptionSummary: {
+        total: messages.length,
+        decrypted: decryptedCount,
+        failed: decryptedMessages.filter(msg => msg.decryptionStatus === 'failed').length,
+        errors: decryptedMessages.filter(msg => msg.decryptionStatus === 'error').length,
+      },
+    });
+  } catch (error) {
+    console.error('Error decrypting messages:', error);
+    res.status(500).json({ error: 'Failed to decrypt messages.' });
+  }
+});
+
+// Get admin access log
+app.get('/api/admin/conversations/:conversationId/access-log', adminAuthMiddleware, async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+
+    // Verify conversation exists
+    const conversation = db.getConversation(conversationId);
+    if (!conversation) {
+      return res.status(404).json({ error: 'Conversation not found.' });
+    }
+
+    const accessLog = db.getAdminAccessLog(conversationId);
+
+    res.json({
+      success: true,
+      conversationId,
+      accessLog: accessLog.map(log => ({
+        id: log.id,
+        adminAddress: log.admin_address,
+        accessReason: log.access_reason,
+        disputeId: log.dispute_id,
+        messagesDecrypted: log.messages_decrypted,
+        accessedAt: log.accessed_at,
+      })),
+    });
+  } catch (error) {
+    console.error('Error getting access log:', error);
+    res.status(500).json({ error: 'Failed to get access log.' });
+  }
+});
+
 // Start server
-app.listen(port, () => {
+httpServer.listen(port, () => {
   console.log(`🔐 PrivacyEscrow API running on port ${port}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`📡 WebSocket server initialized`);
 });
 
 export default app;
