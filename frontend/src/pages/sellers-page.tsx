@@ -1,5 +1,6 @@
 // ... imports
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '@/lib/config';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { User, MessageCircle, Loader2 } from 'lucide-react';
@@ -24,7 +25,7 @@ export function SellersPage() {
   useEffect(() => {
     const fetchSellers = async () => {
       try {
-        const response = await fetch('http://localhost:5001/api/sellers');
+        const response = await fetch(`${API_BASE_URL}/api/sellers`);
         if (!response.ok) {
           throw new Error('Failed to fetch sellers');
         }

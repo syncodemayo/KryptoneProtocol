@@ -4,7 +4,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { MessageSquare, Clock, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { toast } from 'sonner';
-import { io } from 'socket.io-client';
+import { io, Socket } from 'socket.io-client';
+import { API_BASE_URL } from '@/lib/config';
 
 interface Conversation {
   conversationId: string;
@@ -26,7 +27,7 @@ export function ConversationsPage() {
     const token = localStorage.getItem('shadowpay_token');
     if (!token) return;
 
-    const socket = io('http://localhost:5001', {
+    const socket = io(API_BASE_URL, {
       auth: { token },
       transports: ['websocket', 'polling']
     });
@@ -46,7 +47,7 @@ export function ConversationsPage() {
 
   const fetchConversations = async () => {
     try {
-      const response = await fetch('http://localhost:5001/api/conversations', {
+      const response = await fetch(`${API_BASE_URL}/api/conversations`, {
         headers: {
             'Authorization': `Bearer ${localStorage.getItem('shadowpay_token')}`
         }
