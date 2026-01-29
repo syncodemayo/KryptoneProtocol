@@ -601,7 +601,7 @@
 								}
 							],
 							"cookie": [],
-							"body": "{\n  \"success\": true,\n  \"solanaAddress\": \"7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU\",\n  \"createdAt\": \"2024-01-15T10:30:00.000Z\",\n  \"shadowPay\": {\n    \"registered\": true,\n    \"userType\": \"Buyer\",\n    \"commitment\": \"21250096362411284425646165465198222782140840808175069276180300395501913554557\",\n    \"root\": \"0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b\"\n  }\n}"
+							"body": "{\n  \"success\": true,\n  \"solanaAddress\": \"7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU\",\n  \"createdAt\": \"2024-01-15T10:30:00.000Z\",\n  \"shadowPay\": {\n    \"registered\": true,\n    \"userType\": \"Buyer\",\n    \"commitment\": \"21250096362411284425646165465198222782140840808175069276180300395501913554557\",\n    \"root\": \"0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b\",\n    \"api_key\": \"sp_live_1234567890abcdef\"\n  }\n}"
 						},
 						{
 							"name": "Success - Seller Registered",
@@ -635,7 +635,7 @@
 								}
 							],
 							"cookie": [],
-							"body": "{\n  \"success\": true,\n  \"solanaAddress\": \"7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU\",\n  \"createdAt\": \"2024-01-15T10:30:00.000Z\",\n  \"shadowPay\": {\n    \"registered\": true,\n    \"userType\": \"Seller\",\n    \"commitment\": \"21250096362411284425646165465198222782140840808175069276180300395501913554557\",\n    \"root\": \"0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b\",\n    \"api_key\": \"sp_live_1234567890abcdef\",\n    \"treasury_wallet\": \"A3ZEQpuepApGVRB7Z7zDFH33KkYCGh2WpUCai5U2mskr\",\n    \"public_key\": \"1c89bd530bcc83ec8bee0ab9d2a8c2385881b37cd4a7da5da4a4a14f97818e1a\"\n  }\n}"
+							"body": "{\n  \"success\": true,\n  \"solanaAddress\": \"7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU\",\n  \"createdAt\": \"2024-01-15T10:30:00.000Z\",\n  \"shadowPay\": {\n    \"registered\": true,\n    \"userType\": \"Seller\",\n    \"commitment\": \"21250096362411284425646165465198222782140840808175069276180300395501913554557\",\n    \"root\": \"0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b\",\n    \"api_key\": \"sp_live_1234567890abcdef\"\n  }\n}"
 						}
 					]
 				},
@@ -722,7 +722,7 @@
 								}
 							],
 							"cookie": [],
-							"body": "{\n  \"success\": true,\n  \"registered\": true,\n  \"commitment\": \"21250096362411284425646165465198222782140840808175069276180300395501913554557\",\n  \"root\": \"0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b\",\n  \"userType\": \"Buyer\",\n  \"message\": \"Successfully registered with ShadowPay\"\n}"
+							"body": "{\n  \"success\": true,\n  \"registered\": true,\n  \"commitment\": \"21250096362411284425646165465198222782140840808175069276180300395501913554557\",\n  \"root\": \"0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b\",\n  \"userType\": \"Buyer\",\n  \"api_key\": \"sp_live_1234567890abcdef\",\n  \"message\": \"Successfully registered with ShadowPay\"\n}"
 						},
 						{
 							"name": "Success - Seller",
@@ -769,7 +769,7 @@
 								}
 							],
 							"cookie": [],
-							"body": "{\n  \"success\": true,\n  \"registered\": true,\n  \"commitment\": \"21250096362411284425646165465198222782140840808175069276180300395501913554557\",\n  \"root\": \"0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b\",\n  \"userType\": \"Seller\",\n  \"api_key\": \"sp_live_1234567890abcdef\",\n  \"treasury_wallet\": \"A3ZEQpuepApGVRB7Z7zDFH33KkYCGh2WpUCai5U2mskr\",\n  \"public_key\": \"1c89bd530bcc83ec8bee0ab9d2a8c2385881b37cd4a7da5da4a4a14f97818e1a\",\n  \"message\": \"Successfully registered with ShadowPay\"\n}"
+							"body": "{\n  \"success\": true,\n  \"registered\": true,\n  \"commitment\": \"21250096362411284425646165465198222782140840808175069276180300395501913554557\",\n  \"root\": \"0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b\",\n  \"userType\": \"Seller\",\n  \"api_key\": \"sp_live_1234567890abcdef\",\n  \"message\": \"Successfully registered with ShadowPay\"\n}"
 						},
 						{
 							"name": "Missing Fields",
@@ -954,6 +954,792 @@
 							],
 							"cookie": [],
 							"body": "{\n  \"error\": \"Authentication required. Please provide a valid JWT token or Solana signature.\"\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Messaging Endpoints",
+			"item": [
+				{
+					"name": "Get Conversations",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/conversations",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"conversations"
+							]
+						},
+						"description": "Get all conversations for the authenticated user. Returns list of conversations with buyer/seller addresses and last message timestamp."
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{auth_token}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/conversations",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"conversations"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"success\": true,\n  \"conversations\": [\n    {\n      \"conversationId\": \"7xkxtg2cw87d97txjsdpbd5jbkhetqa83tzrujosgasu_9yly...bsv\",\n      \"buyerAddress\": \"7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU\",\n      \"sellerAddress\": \"9yLY...BsV\",\n      \"lastMessageAt\": \"2024-01-15T10:30:00.000Z\",\n      \"createdAt\": \"2024-01-15T10:00:00.000Z\"\n    }\n  ]\n}"
+						}
+					]
+				},
+				{
+					"name": "Create Conversation",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"sellerAddress\": \"9yLY...BsV\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/conversations",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"conversations"
+							]
+						},
+						"description": "Create or get existing conversation with a seller. Requires sellerAddress. Only buyers can initiate conversations with sellers."
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{auth_token}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"sellerAddress\": \"9yLY...BsV\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{base_url}}/api/conversations",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"conversations"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"success\": true,\n  \"conversationId\": \"7xkxtg2cw87d97txjsdpbd5jbkhetqa83tzrujosgasu_9yly...bsv\",\n  \"buyerAddress\": \"7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU\",\n  \"sellerAddress\": \"9yLY...BsV\",\n  \"createdAt\": \"2024-01-15T10:00:00.000Z\"\n}"
+						},
+						{
+							"name": "Not a Seller",
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"body": "{\n  \"error\": \"Recipient must be a registered Seller.\",\n  \"code\": \"NOT_A_SELLER\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Get Conversation Details",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/conversations/:conversationId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"conversations",
+								":conversationId"
+							],
+							"variable": [
+								{
+									"key": "conversationId",
+									"value": "7xkxtg2cw87d97txjsdpbd5jbkhetqa83tzrujosgasu_9yly...bsv"
+								}
+							]
+						},
+						"description": "Get details of a specific conversation. User must be a participant (buyer or seller) to access."
+					},
+					"response": [
+						{
+							"name": "Success",
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"body": "{\n  \"success\": true,\n  \"conversation\": {\n    \"conversationId\": \"7xkxtg2cw87d97txjsdpbd5jbkhetqa83tzrujosgasu_9yly...bsv\",\n    \"buyerAddress\": \"7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU\",\n    \"sellerAddress\": \"9yLY...BsV\",\n    \"lastMessageAt\": \"2024-01-15T10:30:00.000Z\",\n    \"createdAt\": \"2024-01-15T10:00:00.000Z\"\n  }\n}"
+						},
+						{
+							"name": "Not Found",
+							"status": "Not Found",
+							"code": 404,
+							"_postman_previewlanguage": "json",
+							"body": "{\n  \"error\": \"Conversation not found.\"\n}"
+						},
+						{
+							"name": "Access Denied",
+							"status": "Forbidden",
+							"code": 403,
+							"_postman_previewlanguage": "json",
+							"body": "{\n  \"error\": \"Access denied to this conversation.\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Get Message History",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/conversations/:conversationId/messages?limit=50&offset=0",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"conversations",
+								":conversationId",
+								"messages"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "50",
+									"description": "Number of messages to return (default: 50)"
+								},
+								{
+									"key": "offset",
+									"value": "0",
+									"description": "Number of messages to skip (default: 0)"
+								}
+							],
+							"variable": [
+								{
+									"key": "conversationId",
+									"value": "7xkxtg2cw87d97txjsdpbd5jbkhetqa83tzrujosgasu_9yly...bsv"
+								}
+							]
+						},
+						"description": "Get message history for a conversation with pagination. User must be a participant to access."
+					},
+					"response": [
+						{
+							"name": "Success",
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"body": "{\n  \"success\": true,\n  \"conversationId\": \"7xkxtg2cw87d97txjsdpbd5jbkhetqa83tzrujosgasu_9yly...bsv\",\n  \"messages\": [\n    {\n      \"id\": 1,\n      \"conversation_id\": \"7xkxtg2cw87d97txjsdpbd5jbkhetqa83tzrujosgasu_9yly...bsv\",\n      \"sender_address\": \"7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU\",\n      \"recipient_address\": \"9yLY...BsV\",\n      \"message_text\": \"Hello, I'm interested in your product\",\n      \"encrypted_message\": null,\n      \"encryption_metadata\": null,\n      \"is_encrypted\": 0,\n      \"read_at\": null,\n      \"created_at\": \"2024-01-15T10:30:00.000Z\"\n    }\n  ],\n  \"limit\": 50,\n  \"offset\": 0\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Trade Endpoints",
+			"item": [
+				{
+					"name": "Create Trade",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"itemName\": \"Example Item\",\n  \"description\": \"Item description\",\n  \"priceInSol\": \"0.05\",\n  \"buyerWallet\": \"{{solana_address}}\",\n  \"conversationId\": \"optional_conversation_id\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/trades",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"trades"
+							]
+						},
+						"description": "Seller creates a new trade."
+					},
+					"response": [
+						{
+							"name": "Success",
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"body": "{\n  \"success\": true,\n  \"trade\": {\n    \"tradeId\": \"trade_123\",\n    \"sellerAddress\": \"SellerWallet...\",\n    \"buyerAddress\": \"BuyerWallet...\",\n    \"itemName\": \"Example Item\",\n    \"description\": \"Item description\",\n    \"priceInSol\": \"0.05\",\n    \"status\": \"PENDING\"\n  }\n}"
+						}
+					]
+				},
+				{
+					"name": "Accept Trade",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/trades/:tradeId/accept",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"trades",
+								":tradeId",
+								"accept"
+							],
+							"variable": [
+								{
+									"key": "tradeId",
+									"value": "trade_123"
+								}
+							]
+						},
+						"description": "Buyer accepts trade and receives unsigned deposit transaction."
+					},
+					"response": [
+						{
+							"name": "Success",
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"body": "{\n  \"success\": true,\n  \"tradeId\": \"trade_123\",\n  \"status\": \"DEPOSIT_PENDING\",\n  \"transaction\": \"BASE64_UNSIGNED_TX\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Submit Deposit Signature",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"txSignature\": \"DEPOSIT_TX_SIGNATURE\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/trades/:tradeId/deposit-signature",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"trades",
+								":tradeId",
+								"deposit-signature"
+							],
+							"variable": [
+								{
+									"key": "tradeId",
+									"value": "trade_123"
+								}
+							]
+						},
+						"description": "Buyer submits deposit transaction signature for a trade."
+					}
+				},
+				{
+					"name": "Reject Trade",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/trades/:tradeId/reject",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"trades",
+								":tradeId",
+								"reject"
+							],
+							"variable": [
+								{
+									"key": "tradeId",
+									"value": "trade_123"
+								}
+							]
+						},
+						"description": "Buyer rejects the trade."
+					}
+				},
+				{
+					"name": "Get Trade Status",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/trades/:tradeId",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"trades",
+								":tradeId"
+							],
+							"variable": [
+								{
+									"key": "tradeId",
+									"value": "trade_123"
+								}
+							]
+						},
+						"description": "Get trade status and payment verification results."
+					}
+				},
+				{
+					"name": "Settle Trade",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"paymentHeader\": \"BASE64_PROOF\",\n  \"resource\": \"Trade settlement\",\n  \"paymentRequirements\": {\n    \"scheme\": \"zkproof\",\n    \"network\": \"solana-mainnet\",\n    \"maxAmountRequired\": \"0.05\",\n    \"resource\": \"Trade settlement\",\n    \"description\": \"Escrow release\",\n    \"mimeType\": \"application/json\",\n    \"payTo\": \"SELLER_WALLET\",\n    \"maxTimeoutSeconds\": 300\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/trades/:tradeId/settle",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"trades",
+								":tradeId",
+								"settle"
+							],
+							"variable": [
+								{
+									"key": "tradeId",
+									"value": "trade_123"
+								}
+							]
+						},
+						"description": "Buyer settles a trade after deposit confirmation."
+					}
+				}
+			]
+		},
+		{
+			"name": "Encryption Key Endpoints",
+			"item": [
+				{
+					"name": "Store Encryption Keys",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"publicKey\": \"base64_encoded_public_key\",\n  \"privateKey\": \"base64_encoded_private_key\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/user/encryption-key",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"user",
+								"encryption-key"
+							]
+						},
+						"description": "Store encryption keys for E2EE. Private key is encrypted with admin master key for escrow. Public key is stored in plaintext."
+					},
+					"response": [
+						{
+							"name": "Success",
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"body": "{\n  \"success\": true,\n  \"message\": \"Encryption keys stored successfully\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Get Own Public Key",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/user/encryption-key",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"user",
+								"encryption-key"
+							]
+						},
+						"description": "Get own public encryption key for sharing with other users."
+					},
+					"response": [
+						{
+							"name": "Success",
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"body": "{\n  \"success\": true,\n  \"publicKey\": \"base64_encoded_public_key\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Get Own Private Key",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/user/encryption-key/private",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"user",
+								"encryption-key",
+								"private"
+							]
+						},
+						"description": "Get own decrypted private key for client-side message decryption."
+					},
+					"response": [
+						{
+							"name": "Success",
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"body": "{\n  \"success\": true,\n  \"privateKey\": \"base64_encoded_private_key\"\n}"
+						},
+						{
+							"name": "Not Found",
+							"status": "Not Found",
+							"code": 404,
+							"_postman_previewlanguage": "json",
+							"body": "{\n  \"error\": \"Encryption keys not found. Please generate keys first.\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Get Public Key by Address",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/user/encryption-key/:address",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"user",
+								"encryption-key",
+								":address"
+							],
+							"variable": [
+								{
+									"key": "address",
+									"value": "9yLY...BsV"
+								}
+							]
+						},
+						"description": "Get public encryption key for a specific user address. Used to encrypt messages before sending."
+					},
+					"response": [
+						{
+							"name": "Success",
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"body": "{\n  \"success\": true,\n  \"address\": \"9yLY...BsV\",\n  \"publicKey\": \"base64_encoded_public_key\"\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Admin Endpoints",
+			"item": [
+				{
+					"name": "Decrypt Messages",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reason\": \"dispute_resolution\",\n  \"disputeId\": \"optional_dispute_id\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/admin/conversations/:conversationId/decrypt",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"conversations",
+								":conversationId",
+								"decrypt"
+							],
+							"variable": [
+								{
+									"key": "conversationId",
+									"value": "7xkxtg2cw87d97txjsdpbd5jbkhetqa83tzrujosgasu_9yly...bsv"
+								}
+							]
+						},
+						"description": "Decrypt all messages in a conversation for dispute resolution. Requires admin privileges. Access is logged for audit trail."
+					},
+					"response": [
+						{
+							"name": "Success",
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"body": "{\n  \"success\": true,\n  \"conversationId\": \"7xkxtg2cw87d97txjsdpbd5jbkhetqa83tzrujosgasu_9yly...bsv\",\n  \"messages\": [\n    {\n      \"id\": 1,\n      \"conversationId\": \"7xkxtg2cw87d97txjsdpbd5jbkhetqa83tzrujosgasu_9yly...bsv\",\n      \"senderAddress\": \"7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU\",\n      \"recipientAddress\": \"9yLY...BsV\",\n      \"messageText\": \"Decrypted message text\",\n      \"createdAt\": \"2024-01-15T10:30:00.000Z\",\n      \"readAt\": null,\n      \"isEncrypted\": true,\n      \"decryptionStatus\": \"success\"\n    }\n  ],\n  \"decryptionSummary\": {\n    \"total\": 10,\n    \"decrypted\": 10,\n    \"failed\": 0,\n    \"errors\": 0\n  }\n}"
+						},
+						{
+							"name": "Access Denied",
+							"status": "Forbidden",
+							"code": 403,
+							"_postman_previewlanguage": "json",
+							"body": "{\n  \"error\": \"Access denied. Admin privileges required.\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Get Admin Access Log",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/admin/conversations/:conversationId/access-log",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"admin",
+								"conversations",
+								":conversationId",
+								"access-log"
+							],
+							"variable": [
+								{
+									"key": "conversationId",
+									"value": "7xkxtg2cw87d97txjsdpbd5jbkhetqa83tzrujosgasu_9yly...bsv"
+								}
+							]
+						},
+						"description": "Get audit log of all admin access to a conversation. Requires admin privileges."
+					},
+					"response": [
+						{
+							"name": "Success",
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"body": "{\n  \"success\": true,\n  \"conversationId\": \"7xkxtg2cw87d97txjsdpbd5jbkhetqa83tzrujosgasu_9yly...bsv\",\n  \"accessLog\": [\n    {\n      \"id\": 1,\n      \"adminAddress\": \"AdminSolanaAddress...\",\n      \"accessReason\": \"dispute_resolution\",\n      \"disputeId\": \"dispute_123\",\n      \"messagesDecrypted\": 10,\n      \"accessedAt\": \"2024-01-15T11:00:00.000Z\"\n    }\n  ]\n}"
 						}
 					]
 				}
