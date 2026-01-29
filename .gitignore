@@ -32,3 +32,4 @@ dist/
 build/
 
 *-lock.json
+*-lock.yaml

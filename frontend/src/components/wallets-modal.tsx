@@ -8,14 +8,20 @@ import {
   ArrowDownToLine,
   ArrowUpFromLine,
   CheckCircle,
+  Coins,
   Copy,
+  ExternalLink,
+  Eye,
+  EyeOff,
   Key,
+  Lock,
   LogOut,
   Network,
   QrCode,
   RefreshCw,
   Shield,
   TrendingUp,
+  Unlock,
   Wallet,
   XCircle,
   Zap,
@@ -91,20 +97,20 @@ function DepositWithdrawModal({
     {
       symbol: 'SOL',
       name: 'Solana',
-      icon: '🟣',
-      gradient: 'from-purple-100 to-violet-100 border-purple-200',
+      icon: '⚪',
+      gradient: 'from-slate-500/20 to-blue-500/20 border-slate-500/30',
     },
     {
       symbol: 'USDC',
       name: 'USD Coin',
       icon: '🔵',
-      gradient: 'from-blue-100 to-cyan-100 border-blue-200',
+      gradient: 'from-blue-500/20 to-slate-500/20 border-blue-500/30',
     },
     {
       symbol: 'USDT',
       name: 'Tether',
-      icon: '🟢',
-      gradient: 'from-green-100 to-emerald-100 border-green-200',
+      icon: '🔹',
+      gradient: 'from-blue-600/20 to-slate-400/20 border-blue-600/30',
     },
   ];
 
@@ -198,10 +204,10 @@ function DepositWithdrawModal({
             : undefined,
           action: response.result.explorerUrl
             ? {
-              label: 'View Transaction',
-              onClick: () =>
-                window.open(response.result.explorerUrl, '_blank'),
-            }
+                label: 'View Transaction',
+                onClick: () =>
+                  window.open(response.result.explorerUrl, '_blank'),
+              }
             : undefined,
         });
 
@@ -256,25 +262,25 @@ function DepositWithdrawModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-h-[90vh] w-[95vw] max-w-md overflow-hidden overflow-y-auto border border-indigo-200 bg-white shadow-2xl backdrop-blur-md sm:max-w-lg md:max-w-xl lg:max-w-2xl">
+        <DialogContent className="max-h-[90vh] w-[95vw] max-w-md overflow-hidden overflow-y-auto border border-blue-500/50 bg-slate-900/98 shadow-2xl backdrop-blur-md sm:max-w-lg md:max-w-xl lg:max-w-2xl">
           {/* Solid background overlay */}
-          <div className="absolute inset-0 bg-white"></div>
+          <div className="absolute inset-0 bg-slate-900/95"></div>
 
           <div className="relative">
             <DialogHeader className="space-y-3 pb-4 sm:space-y-4 sm:pb-6">
               <div className="flex items-center gap-2 sm:gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-200 bg-gradient-to-r from-cyan-100 to-indigo-100 sm:h-12 sm:w-12">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-blue-400/30 bg-gradient-to-r from-blue-500/20 to-slate-500/20 sm:h-12 sm:w-12">
                   {type === 'deposit' ? (
-                    <ArrowDownToLine className="h-5 w-5 text-emerald-600 sm:h-6 sm:w-6" />
+                    <ArrowDownToLine className="h-5 w-5 text-blue-400 sm:h-6 sm:w-6" />
                   ) : (
-                    <ArrowUpFromLine className="h-5 w-5 text-orange-600 sm:h-6 sm:w-6" />
+                    <ArrowUpFromLine className="h-5 w-5 text-slate-400 sm:h-6 sm:w-6" />
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <DialogTitle className="truncate bg-gradient-to-r from-cyan-600 to-indigo-600 bg-clip-text text-lg font-bold text-transparent sm:text-xl">
+                  <DialogTitle className="truncate bg-gradient-to-r from-blue-300 to-slate-300 bg-clip-text text-lg font-bold text-transparent sm:text-xl">
                     {type === 'deposit' ? 'Receive Assets' : 'Send Assets'}
                   </DialogTitle>
-                  <p className="text-xs text-gray-600 sm:text-sm">
+                  <p className="text-xs text-slate-400 sm:text-sm">
                     {type === 'deposit'
                       ? 'Transfer tokens to your Solana wallet'
                       : 'Transfer tokens from your Solana wallet'}
@@ -285,14 +291,14 @@ function DepositWithdrawModal({
 
             <div className="space-y-4 sm:space-y-6">
               <div className="space-y-2 sm:space-y-3">
-                <Label className="text-xs font-medium tracking-wider text-indigo-600 uppercase">
+                <Label className="text-xs font-medium tracking-wider text-blue-300 uppercase">
                   Select Token
                 </Label>
                 <Select value={selectedToken} onValueChange={setSelectedToken}>
-                  <SelectTrigger className="h-10 rounded-xl border-indigo-200 bg-gray-50 text-gray-900 sm:h-12">
+                  <SelectTrigger className="h-10 rounded-xl border-blue-500/30 bg-slate-800/50 text-white sm:h-12">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="border-indigo-200 bg-white">
+                  <SelectContent className="border-blue-500/30 bg-slate-800">
                     {tokens.map(token => (
                       <SelectItem key={token.symbol} value={token.symbol}>
                         <div className="flex items-center gap-2 sm:gap-3">
@@ -303,7 +309,7 @@ function DepositWithdrawModal({
                             <span className="text-sm font-medium sm:text-base">
                               {token.symbol}
                             </span>
-                            <span className="ml-1 text-xs text-gray-600 sm:ml-2">
+                            <span className="ml-1 text-xs text-slate-400 sm:ml-2">
                               ({token.name})
                             </span>
                           </div>
@@ -318,19 +324,19 @@ function DepositWithdrawModal({
                 <div
                   className={`relative overflow-hidden rounded-xl bg-gradient-to-r ${selectedTokenData?.gradient} border p-4 sm:p-6`}
                 >
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gray-100/20 to-transparent"></div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent"></div>
                   <div className="relative space-y-4 sm:space-y-6">
                     <div className="text-center">
-                      <Label className="mb-2 block text-xs font-medium tracking-wider uppercase text-gray-700 sm:mb-3">
+                      <Label className="mb-2 block text-xs font-medium tracking-wider uppercase opacity-80 sm:mb-3">
                         Deposit Address
                       </Label>
 
                       {/* QR Code - Responsive sizing */}
                       <div className="mb-3 flex justify-center sm:mb-4">
-                        <div className="rounded-xl border border-gray-300 bg-white p-3 sm:rounded-2xl sm:p-4">
+                        <div className="rounded-xl border border-slate-300 bg-white p-3 sm:rounded-2xl sm:p-4">
                           {isGeneratingQR ? (
                             <div className="flex h-[140px] w-[140px] items-center justify-center sm:h-[180px] sm:w-[180px]">
-                              <RefreshCw className="h-6 w-6 animate-spin text-gray-400 sm:h-8 sm:w-8" />
+                              <RefreshCw className="h-6 w-6 animate-spin text-slate-400 sm:h-8 sm:w-8" />
                             </div>
                           ) : qrCodeDataUrl ? (
                             <img
@@ -339,17 +345,17 @@ function DepositWithdrawModal({
                               className="h-[140px] w-[140px] rounded-lg sm:h-[180px] sm:w-[180px]"
                             />
                           ) : (
-                            <div className="flex h-[140px] w-[140px] items-center justify-center rounded-lg bg-gray-100 sm:h-[180px] sm:w-[180px]">
-                              <QrCode className="h-8 w-8 text-gray-400 sm:h-12 sm:w-12" />
+                            <div className="flex h-[140px] w-[140px] items-center justify-center rounded-lg bg-slate-100 sm:h-[180px] sm:w-[180px]">
+                              <QrCode className="h-8 w-8 text-slate-400 sm:h-12 sm:w-12" />
                             </div>
                           )}
                         </div>
                       </div>
 
                       {/* Address Display - Responsive */}
-                      <div className="relative overflow-hidden rounded-xl border border-gray-300 bg-gray-50 p-3 sm:p-4">
+                      <div className="relative overflow-hidden rounded-xl border border-slate-600/50 bg-slate-800/50 p-3 sm:p-4">
                         <div className="flex items-center gap-2 sm:gap-3">
-                          <code className="min-w-0 flex-1 font-mono text-xs break-all text-gray-800 sm:text-sm">
+                          <code className="min-w-0 flex-1 font-mono text-xs break-all text-slate-200 sm:text-sm">
                             {getDepositAddress() || 'Address not available'}
                           </code>
                           <Button
@@ -359,7 +365,7 @@ function DepositWithdrawModal({
                               navigator.clipboard.writeText(getDepositAddress())
                             }
                             disabled={!getDepositAddress()}
-                            className="flex-shrink-0 text-cyan-600 hover:bg-cyan-100 hover:text-cyan-700"
+                            className="flex-shrink-0 text-blue-400 hover:bg-blue-500/10 hover:text-blue-300"
                           >
                             <Copy className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Button>
@@ -368,18 +374,18 @@ function DepositWithdrawModal({
 
                       {/* Network Info */}
                       <div className="mt-3 flex items-center justify-center gap-2 text-xs sm:mt-4 sm:text-sm">
-                        <Network className="h-3 w-3 text-gray-600 sm:h-4 sm:w-4" />
-                        <span className="text-gray-600">Network: Solana</span>
+                        <Network className="h-3 w-3 opacity-60 sm:h-4 sm:w-4" />
+                        <span className="opacity-80">Network: Solana</span>
                       </div>
                     </div>
 
                     {/* Warning - Responsive padding */}
-                    <div className="relative overflow-hidden rounded-xl border border-yellow-300 bg-yellow-100 p-3 sm:p-4">
-                      <div className="absolute inset-0 bg-gradient-to-r from-yellow-100/50 to-amber-100/50"></div>
+                    <div className="relative overflow-hidden rounded-xl border border-yellow-500/30 bg-yellow-600/20 p-3 sm:p-4">
+                      <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/5 to-blue-500/10"></div>
                       <div className="relative">
                         <div className="flex items-start gap-2 sm:gap-3">
-                          <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-yellow-600 sm:h-5 sm:w-5" />
-                          <div className="min-w-0 text-xs text-yellow-800 sm:text-sm">
+                          <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-yellow-400 sm:h-5 sm:w-5" />
+                          <div className="min-w-0 text-xs text-yellow-200 sm:text-sm">
                             <p className="mb-1 font-medium">Security Notice:</p>
                             <p>
                               Only send {selectedToken} tokens on the Solana
@@ -393,7 +399,7 @@ function DepositWithdrawModal({
 
                     <Button
                       onClick={handleDeposit}
-                      className="h-10 w-full rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 text-sm font-semibold text-white transition-all duration-300 hover:from-emerald-500 hover:to-green-500 sm:h-12 sm:text-base"
+                      className="h-10 w-full rounded-xl bg-gradient-to-r from-blue-600 to-slate-600 text-sm font-semibold transition-all duration-300 hover:from-blue-500 hover:to-slate-500 sm:h-12 sm:text-base"
                       disabled={!getDepositAddress()}
                     >
                       <Copy className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
@@ -402,14 +408,14 @@ function DepositWithdrawModal({
                   </div>
                 </div>
               ) : (
-                // Withdraw form
+                // Withdraw Form
                 <div className="space-y-3 sm:space-y-4">
                   <div className="space-y-2 sm:space-y-3">
                     <div className="flex items-center justify-between">
-                      <Label className="text-xs font-medium tracking-wider text-orange-600 uppercase">
+                      <Label className="text-xs font-medium tracking-wider text-slate-300 uppercase">
                         Amount
                       </Label>
-                      <span className="text-xs text-gray-600">
+                      <span className="text-xs text-slate-400">
                         Balance: {getTokenBalance(selectedToken)}{' '}
                         {selectedToken}
                       </span>
@@ -420,13 +426,13 @@ function DepositWithdrawModal({
                           type="number"
                           placeholder="0.0"
                           value={amount}
-                          onChange={e => setAmount(e.target.value)}
-                          className="h-10 rounded-xl border-orange-200 bg-gray-50 text-center text-base font-semibold text-gray-900 placeholder:text-gray-500 focus:border-orange-300 sm:h-12 sm:text-lg"
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAmount(e.target.value)}
+                          className="h-10 rounded-xl border-slate-500/30 bg-slate-800/50 text-center text-base font-semibold text-white placeholder:text-slate-500 focus:border-slate-400/50 sm:h-12 sm:text-lg"
                           step="any"
                           min="0"
                         />
                         <div className="absolute top-1/2 right-2 -translate-y-1/2 sm:right-3">
-                          <span className="text-xs font-bold text-orange-600 sm:text-sm">
+                          <span className="text-xs font-bold text-slate-400 sm:text-sm">
                             {selectedToken}
                           </span>
                         </div>
@@ -438,7 +444,7 @@ function DepositWithdrawModal({
                         disabled={
                           parseFloat(getTokenBalance(selectedToken)) === 0
                         }
-                        className="h-10 rounded-xl border-orange-300 bg-orange-100 px-3 text-xs text-orange-700 hover:bg-orange-200 sm:h-12 sm:px-4 sm:text-sm"
+                        className="h-10 rounded-xl border-slate-400/30 bg-slate-500/10 px-3 text-xs text-slate-300 hover:bg-slate-500/20 sm:h-12 sm:px-4 sm:text-sm"
                       >
                         MAX
                       </Button>
@@ -446,39 +452,40 @@ function DepositWithdrawModal({
                   </div>
 
                   <div className="space-y-2 sm:space-y-3">
-                    <Label className="text-xs font-medium tracking-wider text-orange-600 uppercase">
+                    <Label className="text-xs font-medium tracking-wider text-slate-300 uppercase">
                       Destination Address
                     </Label>
                     <div className="relative">
                       <Input
                         placeholder="Enter Solana address"
                         value={withdrawAddress}
-                        onChange={e => handleAddressChange(e.target.value)}
-                        className={`h-10 rounded-xl border bg-gray-50 pr-10 text-sm text-gray-900 placeholder:text-gray-500 sm:h-12 sm:pr-12 sm:text-base ${isAddressValid === true
-                            ? 'border-green-300 focus:border-green-400'
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleAddressChange(e.target.value)}
+                        className={`h-10 rounded-xl border bg-slate-800/50 pr-10 text-sm text-white placeholder:text-slate-500 sm:h-12 sm:pr-12 sm:text-base ${
+                          isAddressValid === true
+                            ? 'border-green-500/50 focus:border-green-400/50'
                             : isAddressValid === false
-                              ? 'border-red-300 focus:border-red-400'
-                              : 'border-orange-200 focus:border-orange-300'
-                          }`}
+                              ? 'border-red-500/50 focus:border-red-400/50'
+                              : 'border-slate-500/30 focus:border-slate-400/50'
+                        }`}
                       />
                       <div className="absolute top-1/2 right-2 -translate-y-1/2 sm:right-3">
                         {isAddressValid === true && (
-                          <CheckCircle className="h-4 w-4 text-green-600 sm:h-5 sm:w-5" />
+                          <CheckCircle className="h-4 w-4 text-green-400 sm:h-5 sm:w-5" />
                         )}
                         {isAddressValid === false && (
-                          <XCircle className="h-4 w-4 text-red-600 sm:h-5 sm:w-5" />
+                          <XCircle className="h-4 w-4 text-red-400 sm:h-5 sm:w-5" />
                         )}
                       </div>
                     </div>
                   </div>
 
                   {/* Network Fees Info */}
-                  <div className="relative overflow-hidden rounded-xl border border-blue-200 bg-blue-100 p-3 sm:p-4">
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-100/50 to-cyan-100/50"></div>
+                  <div className="relative overflow-hidden rounded-xl border border-blue-500/30 bg-blue-600/20 p-3 sm:p-4">
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-blue-500/10"></div>
                     <div className="relative">
                       <div className="flex items-start gap-2 sm:gap-3">
-                        <Zap className="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-600 sm:h-5 sm:w-5" />
-                        <div className="text-xs text-blue-800 sm:text-sm">
+                        <Zap className="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-400 sm:h-5 sm:w-5" />
+                        <div className="text-xs text-blue-200 sm:text-sm">
                           <p className="mb-1 font-medium">Network Fees:</p>
                           <p>
                             Small SOL fee will be deducted for Solana network
@@ -491,7 +498,7 @@ function DepositWithdrawModal({
 
                   <Button
                     onClick={handleWithdraw}
-                    className="h-10 w-full rounded-xl bg-gradient-to-r from-orange-600 to-red-600 text-sm font-semibold text-white transition-all duration-300 hover:from-orange-500 hover:to-red-500 sm:h-12 sm:text-base"
+                    className="h-10 w-full rounded-xl bg-gradient-to-r from-slate-600 to-red-600 text-sm font-semibold transition-all duration-300 hover:from-slate-500 hover:to-red-500 sm:h-12 sm:text-base"
                     disabled={
                       !amount ||
                       !withdrawAddress ||
@@ -500,7 +507,7 @@ function DepositWithdrawModal({
                       parseFloat(getTokenBalance(selectedToken)) === 0 ||
                       parseFloat(amount) <= 0 ||
                       parseFloat(amount) >
-                      parseFloat(getTokenBalance(selectedToken))
+                        parseFloat(getTokenBalance(selectedToken))
                     }
                   >
                     {isProcessing ? (
@@ -524,16 +531,17 @@ function DepositWithdrawModal({
 
       {/* Confirmation Modal */}
       <Dialog open={showConfirmation} onOpenChange={setShowConfirmation}>
-        <DialogContent className="max-h-[90vh] w-[95vw] max-w-md overflow-y-auto border border-orange-200 bg-white shadow-2xl backdrop-blur-md sm:max-w-lg">
-          <div className="absolute inset-0 bg-white"></div>
+        <DialogContent className="max-h-[90vh] w-[95vw] max-w-md overflow-y-auto border border-slate-500/50 bg-slate-900/98 shadow-2xl backdrop-blur-md sm:max-w-lg">
+          {/* Solid background overlay */}
+          <div className="absolute inset-0 bg-slate-900/95"></div>
           <div className="relative">
             <DialogHeader className="space-y-4 pb-6">
               <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-orange-300 bg-gradient-to-r from-orange-100 to-red-100">
-                  <AlertCircle className="h-6 w-6 text-orange-600" />
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-slate-400/30 bg-gradient-to-r from-slate-500/20 to-red-500/20">
+                  <AlertCircle className="h-6 w-6 text-slate-400" />
                 </div>
                 <div className="flex-1">
-                  <DialogTitle className="text-xl font-bold text-orange-700">
+                  <DialogTitle className="text-xl font-bold text-slate-300">
                     Confirm Transaction
                   </DialogTitle>
                 </div>
@@ -541,34 +549,34 @@ function DepositWithdrawModal({
             </DialogHeader>
 
             <div className="space-y-6">
-              <div className="relative overflow-hidden rounded-xl border border-orange-200 bg-orange-100 p-6">
-                <div className="absolute inset-0 bg-gradient-to-r from-orange-100/50 to-red-100/50"></div>
+              <div className="relative overflow-hidden rounded-xl border border-slate-500/30 bg-slate-600/20 p-6">
+                <div className="absolute inset-0 bg-gradient-to-r from-slate-500/5 to-red-500/10"></div>
                 <div className="relative">
-                  <p className="mb-4 font-medium text-orange-800">
+                  <p className="mb-4 font-medium text-slate-200">
                     Review transaction details:
                   </p>
                   <div className="space-y-3 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Token:</span>
-                      <span className="font-medium text-orange-800">
+                      <span className="text-slate-400">Token:</span>
+                      <span className="font-medium text-slate-200">
                         {selectedToken}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Amount:</span>
-                      <span className="font-medium text-orange-800">
+                      <span className="text-slate-400">Amount:</span>
+                      <span className="font-medium text-slate-200">
                         {amount} {selectedToken}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Network:</span>
-                      <span className="font-medium text-orange-800">
+                      <span className="text-slate-400">Network:</span>
+                      <span className="font-medium text-slate-200">
                         Solana
                       </span>
                     </div>
                     <div className="flex items-start justify-between">
-                      <span className="text-gray-600">To:</span>
-                      <span className="ml-2 text-right font-mono text-xs break-all text-orange-800">
+                      <span className="text-slate-400">To:</span>
+                      <span className="ml-2 text-right font-mono text-xs break-all text-slate-200">
                         {withdrawAddress}
                       </span>
                     </div>
@@ -576,12 +584,12 @@ function DepositWithdrawModal({
                 </div>
               </div>
 
-              <div className="relative overflow-hidden rounded-xl border border-red-200 bg-red-100 p-4">
-                <div className="absolute inset-0 bg-gradient-to-r from-red-100/50 to-rose-100/50"></div>
+              <div className="relative overflow-hidden rounded-xl border border-red-500/30 bg-red-600/20 p-4">
+                <div className="absolute inset-0 bg-gradient-to-r from-red-500/5 to-blue-500/10"></div>
                 <div className="relative">
                   <div className="flex items-start gap-3">
-                    <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600" />
-                    <div className="text-sm text-red-800">
+                    <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-400" />
+                    <div className="text-sm text-red-200">
                       <p className="mb-2 font-medium">⚠️ Final Warning:</p>
                       <p className="mb-2">
                         This action cannot be undone. Verify:
@@ -600,13 +608,13 @@ function DepositWithdrawModal({
                 <Button
                   variant="outline"
                   onClick={() => setShowConfirmation(false)}
-                  className="h-12 flex-1 rounded-xl border-gray-300 bg-gray-50 text-gray-700 hover:bg-gray-100"
+                  className="h-12 flex-1 rounded-xl border-slate-600/50 bg-slate-800/50 text-slate-300 hover:bg-slate-700/50"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={confirmWithdrawal}
-                  className="h-12 flex-1 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 font-semibold text-white hover:from-red-500 hover:to-rose-500"
+                  className="h-12 flex-1 rounded-xl bg-gradient-to-r from-red-600 to-blue-600 font-semibold hover:from-red-500 hover:to-blue-500"
                   disabled={isProcessing}
                 >
                   {isProcessing ? (
@@ -634,8 +642,13 @@ export function WalletsModal({
   isLoadingWallet,
 }: WalletsModalProps) {
   const { publicKey } = useWallet();
-  const { isAuthenticated, disconnect } = useCustomWallet();
-  const [tokenBalances, setTokenBalances] = useState<SolanaTokenBalances | null>(null);
+  const {
+    isAuthenticated,
+    disconnect,
+  } = useCustomWallet();
+  const [tokenBalances, setTokenBalances] = useState<SolanaTokenBalances | null>(
+    null
+  );
   const [isLoadingBalances, setIsLoadingBalances] = useState(false);
   const [depositWithdrawModal, setDepositWithdrawModal] = useState<{
     isOpen: boolean;
@@ -695,7 +708,7 @@ export function WalletsModal({
   const formatBalance = (balance: string | number) => {
     const num = parseFloat(balance.toString());
     if (num === 0) return '0.00';
-    if (num < 0.00001) return '< 0.00001';
+    if (num < 0.0001) return '< 0.0001';
     if (num < 1) return num.toFixed(6);
     if (num < 1000) return num.toFixed(4);
     return num.toFixed(2);
@@ -753,430 +766,675 @@ export function WalletsModal({
       return [];
     };
 
-    const tokens = getNetworkTokens();
+    const networkTokens = getNetworkTokens();
+    const networkIcon = network === 'solana' ? '🟢' : '🟣';
+    const networkColor = network === 'solana' ? 'slate' : 'blue';
 
     return (
       <div
-        className={`group relative overflow-hidden rounded-2xl border p-5 transition-all duration-300 hover:shadow-lg ${isMain
-            ? 'border-indigo-200 bg-gradient-to-r from-indigo-50 to-purple-50'
-            : 'border-gray-200 bg-white hover:border-gray-300'
-          }`}
+        className={`relative overflow-hidden rounded-xl bg-gradient-to-r from-${networkColor}-600/20 to-${networkColor === 'slate' ? 'slate' : 'slate'}-600/20 border border-${networkColor}-500/30`}
       >
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gray-100/20 to-transparent opacity-0 transition-opacity group-hover:opacity-100"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent"></div>
 
-        <div className="relative space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div
-                className={`flex h-10 w-10 items-center justify-center rounded-xl border text-lg ${network === 'solana'
-                    ? 'border-purple-200 bg-purple-100 text-purple-600'
-                    : 'border-violet-200 bg-violet-100 text-violet-600'
-                  }`}
-              >
-                {network === 'solana' ? '🟣' : '🟪'}
+        <div className="relative p-4 sm:p-6">
+          {/* Header - Responsive */}
+          <div className="mb-3 flex items-center justify-between sm:mb-4">
+            <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-slate-600/50 bg-gradient-to-r from-slate-800/80 to-slate-700/80 sm:h-10 sm:w-10">
+                {isMain ? (
+                  <Wallet className="h-4 w-4 text-blue-400 sm:h-5 sm:w-5" />
+                ) : (
+                  <span className="text-base sm:text-lg">{networkIcon}</span>
+                )}
               </div>
-              <div>
-                <h3
-                  className={`text-sm font-semibold ${isMain ? 'text-indigo-700' : 'text-gray-900'
-                    }`}
-                >
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-semibold text-white sm:text-base">
                   {label}
-                </h3>
-                <p className="text-xs capitalize text-gray-500">{network}</p>
+                </div>
+                <div className="truncate font-mono text-xs text-slate-300">
+                  {address ? (
+                    `${address.slice(0, 6)}...${address.slice(-4)}`
+                  ) : (
+                    <span className="flex items-center gap-1 text-slate-400">
+                      <AlertCircle className="h-3 w-3 flex-shrink-0" />
+                      <span className="truncate">Unavailable</span>
+                    </span>
+                  )}
+                </div>
+                <div className="text-xs text-slate-400 capitalize">
+                  {network} Network
+                </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              {isMain && (
-                <div className="rounded-full bg-indigo-100 px-2 py-1">
-                  <span className="text-xs font-medium text-indigo-700">
-                    Connected
-                  </span>
+            {address && (
+              <div className="flex flex-shrink-0 gap-1 sm:gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => copyToClipboard(address, label)}
+                  className="h-7 w-7 p-0 text-slate-300 hover:bg-white/10 hover:text-white sm:h-8 sm:w-8"
+                >
+                  <Copy className="h-3 w-3 sm:h-4 sm:w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    const explorerUrl =
+                      network === 'solana'
+                        ? `https://explorer.solana.com/address/${address}`
+                        : `https://polygonscan.com/address/${address}`;
+                    window.open(explorerUrl, '_blank');
+                  }}
+                  className="h-7 w-7 p-0 text-slate-300 hover:bg-white/10 hover:text-white sm:h-8 sm:w-8"
+                >
+                  <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4" />
+                </Button>
+                {isMain && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleDisconnect}
+                    className="h-7 w-7 p-0 text-red-400 hover:bg-red-500/10 hover:text-red-300 sm:h-8 sm:w-8"
+                  >
+                    <LogOut className="h-3 w-3 sm:h-4 sm:w-4" />
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {!isMain && address && (
+            <>
+              {/* Balances - Responsive */}
+              <div className="mb-3 space-y-2 sm:mb-4 sm:space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <Coins className="h-3 w-3 text-slate-400 sm:h-4 sm:w-4" />
+                    <span className="text-xs font-medium tracking-wider text-slate-300 uppercase">
+                      Token Balances
+                    </span>
+                  </div>
+                  {isLoadingBalances && isAuthenticated && (
+                    <RefreshCw className="h-3 w-3 animate-spin text-slate-400 sm:h-4 sm:w-4" />
+                  )}
                 </div>
-              )}
-            </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-gray-500">
-              Address
-            </Label>
-            <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 p-3">
-              <code className="min-w-0 flex-1 font-mono text-xs break-all text-gray-800">
-                {address}
-              </code>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => copyToClipboard(address, label)}
-                className="flex-shrink-0 text-gray-400 hover:text-gray-600"
-              >
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Token Balances */}
-          {tokens.length > 0 && (
-            <div className="space-y-3">
-              <Label className="text-xs uppercase tracking-wider text-gray-500">
-                Token Balances
-              </Label>
-              <div className="space-y-2">
-                {tokens.map(([tokenKey, tokenData]) => {
-                  const symbol = tokenData.symbol;
-                  const balance = formatBalance(tokenData.balance);
-                  return (
-                    <div
-                      key={tokenKey}
-                      className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50 p-3"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-base">
-                          {getTokenIcon(symbol)}
-                        </span>
-                        <div>
-                          <span className="text-sm font-medium text-gray-900">
-                            {symbol}
+                {!isAuthenticated ? (
+                  <div className="rounded-lg bg-slate-800/30 py-2 text-center text-xs text-slate-400 sm:py-3">
+                    Please authenticate to view balances
+                  </div>
+                ) : isLoadingBalances ? (
+                  <div className="rounded-lg bg-slate-800/30 py-2 text-center text-xs text-slate-400 sm:py-3">
+                    Loading balances...
+                  </div>
+                ) : networkTokens.length > 0 ? (
+                  <div className="grid gap-1 sm:gap-2">
+                    {networkTokens.map(([tokenKey, token]) => (
+                      <div
+                        key={tokenKey}
+                        className="flex items-center justify-between rounded-lg border border-slate-700/50 bg-slate-800/30 px-2 py-1.5 sm:px-3 sm:py-2"
+                      >
+                        <div className="flex min-w-0 flex-1 items-center gap-1 sm:gap-2">
+                          <span className="flex-shrink-0 text-xs sm:text-sm">
+                            {getTokenIcon(token.symbol)}
                           </span>
+                          <span className="truncate text-xs font-medium text-slate-200 sm:text-sm">
+                            {token.symbol}
+                          </span>
+                          {network === 'polygon' && token.symbol === 'USDC' && (
+                            <span className="hidden text-xs text-slate-400 sm:inline">
+                              (Polygon)
+                            </span>
+                          )}
+                          {network === 'solana' && token.symbol === 'USDC' && (
+                            <span className="hidden text-xs text-slate-400 sm:inline">
+                              (Solana)
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex flex-shrink-0 items-center gap-1 sm:gap-2">
+                          <span className="font-mono text-xs text-slate-200 sm:text-sm">
+                            {formatBalance(token.balance)}
+                          </span>
+                          {parseFloat(token.balance) > 0 && (
+                            <TrendingUp className="h-2.5 w-2.5 text-green-400 sm:h-3 sm:w-3" />
+                          )}
                         </div>
                       </div>
-                      <div className="text-right">
-                        <span className="text-sm font-semibold text-gray-900">
-                          {balance}
-                        </span>
-                        <span className="ml-1 text-xs text-gray-500">
-                          {symbol}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
+                    ))}
+                  </div>
+                ) : isAuthenticated ? (
+                  <div className="rounded-lg bg-slate-800/30 py-2 text-center text-xs text-slate-400 sm:py-3">
+                    No balances available
+                  </div>
+                ) : null}
               </div>
-            </div>
-          )}
 
-          {/* Action Buttons */}
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              onClick={() =>
-                setDepositWithdrawModal({
-                  isOpen: true,
-                  type: 'deposit',
-                  network,
-                })
-              }
-              className="flex-1 rounded-xl bg-emerald-600 text-xs font-medium text-white hover:bg-emerald-500"
-            >
-              <ArrowDownToLine className="mr-1 h-3 w-3" />
-              Receive
-            </Button>
-            <Button
-              size="sm"
-              onClick={() =>
-                setDepositWithdrawModal({
-                  isOpen: true,
-                  type: 'withdraw',
-                  network,
-                })
-              }
-              disabled={!tokens.some(([, token]) => parseFloat(token.balance) > 0)}
-              className="flex-1 rounded-xl bg-orange-600 text-xs font-medium text-white hover:bg-orange-500 disabled:bg-gray-300 disabled:text-gray-500"
-            >
-              <ArrowUpFromLine className="mr-1 h-3 w-3" />
-              Send
-            </Button>
-          </div>
+              {/* Action Buttons - Responsive - Only show for Solana network */}
+              {network === 'solana' && (
+                <div className="flex gap-2 sm:gap-3">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 flex-1 rounded-lg border-blue-400/30 bg-blue-500/10 text-xs text-blue-300 hover:bg-blue-500/20 sm:h-10 sm:text-sm"
+                    onClick={() =>
+                      setDepositWithdrawModal({
+                        isOpen: true,
+                        type: 'deposit',
+                        network,
+                      })
+                    }
+                    disabled={!isAuthenticated}
+                  >
+                    <ArrowDownToLine className="mr-1 h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="hidden sm:inline">Receive</span>
+                    <span className="sm:hidden">RCV</span>
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 flex-1 rounded-lg border-slate-400/30 bg-slate-500/10 text-xs text-slate-300 hover:bg-slate-500/20 sm:h-10 sm:text-sm"
+                    onClick={() =>
+                      setDepositWithdrawModal({
+                        isOpen: true,
+                        type: 'withdraw',
+                        network,
+                      })
+                    }
+                    disabled={
+                      !isAuthenticated ||
+                      networkTokens.length === 0 ||
+                      networkTokens.every(
+                        ([_, token]) => parseFloat(token.balance) === 0
+                      )
+                    }
+                  >
+                    <ArrowUpFromLine className="mr-1 h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="hidden sm:inline">Send</span>
+                    <span className="sm:hidden">SND</span>
+                  </Button>
+                </div>
+              )}
+
+              {/* Info text for Polygon wallet */}
+              {network === 'polygon' && (
+                <div className="rounded-lg bg-slate-800/20 py-1.5 text-center text-xs text-slate-500 sm:py-2">
+                  Used for Polymarket trading
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
     );
   };
 
+  const hasAnyWalletData = publicKey || walletInfo;
+  const hasCustodialWallets =
+    walletInfo?.solana?.address || walletInfo?.polygon?.address;
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-h-[90vh] w-[95vw] max-w-2xl overflow-y-auto border border-indigo-200 bg-white shadow-2xl sm:max-w-3xl lg:max-w-4xl">
-          <div className="absolute inset-0 bg-white"></div>
+        <DialogContent className="max-h-[95vh] w-[95vw] max-w-md overflow-hidden overflow-y-auto border border-blue-500/50 bg-slate-900/98 shadow-2xl backdrop-blur-md sm:max-w-lg md:max-w-xl lg:max-w-3xl">
+          {/* Solid background overlay */}
+          <div className="absolute inset-0 bg-slate-900/95"></div>
 
           <div className="relative">
-            <DialogHeader className="space-y-4 pb-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-100 to-purple-100">
-                    <Wallet className="h-6 w-6 text-indigo-600" />
+            <DialogHeader className="space-y-3 pb-4 sm:space-y-4 sm:pb-6">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-blue-400/30 bg-gradient-to-r from-blue-500/20 to-blue-500/20 sm:h-12 sm:w-12">
+                  <Wallet className="h-5 w-5 text-blue-400 sm:h-6 sm:w-6" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <DialogTitle className="bg-gradient-to-r from-blue-300 to-blue-300 bg-clip-text text-lg font-bold text-transparent sm:text-xl">
+                    Wallet Manager
+                  </DialogTitle>
+                  <p className="text-xs text-slate-400 sm:text-sm">
+                    Manage your multi-chain wallets and assets
+                  </p>
+                </div>
+              </div>
+            </DialogHeader>
+
+            <div className="space-y-3 sm:space-y-4">
+              {publicKey && (
+                <WalletRow
+                  label="Main Wallet (Connected)"
+                  address={publicKey.toBase58()}
+                  network="solana"
+                  isMain={true}
+                />
+              )}
+
+              {isLoadingWallet && (
+                <div className="py-6 text-center sm:py-8">
+                  <div className="mb-2 flex items-center justify-center gap-2 sm:mb-3 sm:gap-3">
+                    <RefreshCw className="h-5 w-5 animate-spin text-blue-400 sm:h-6 sm:w-6" />
+                    <span className="text-sm font-medium text-blue-300 sm:text-base">
+                      Initializing custody wallets...
+                    </span>
                   </div>
-                  <div>
-                    <DialogTitle className="text-xl font-bold text-indigo-700">
-                      Your Wallets
-                    </DialogTitle>
-                    <p className="text-sm text-gray-600">
-                      Manage your crypto wallets and balances
+                  <p className="text-xs text-slate-400 sm:text-sm">
+                    Setting up secure multi-chain infrastructure
+                  </p>
+                </div>
+              )}
+
+              {!isLoadingWallet && walletInfo?.polygon?.address && (
+                <WalletRow
+                  label="Polygon Custody Wallet"
+                  address={walletInfo.polygon.address}
+                  network="polygon"
+                />
+              )}
+
+              {!isLoadingWallet && walletInfo?.solana?.address && (
+                <WalletRow
+                  label="Solana Custody Wallet"
+                  address={walletInfo.solana.address}
+                  network="solana"
+                />
+              )}
+
+              {!isLoadingWallet && !hasCustodialWallets && walletInfo && (
+                <div className="relative overflow-hidden rounded-xl border border-slate-500/30 bg-gradient-to-r from-slate-600/20 to-blue-600/20 p-3 sm:p-4">
+                  <div className="relative text-center">
+                    <AlertCircle className="mx-auto mb-2 h-6 w-6 text-slate-400 sm:h-8 sm:w-8" />
+                    <p className="mb-1 text-sm font-medium text-slate-300 sm:text-base">
+                      Custody Setup In Progress
+                    </p>
+                    <p className="text-xs text-slate-200/70">
+                      Your custody wallets are being initialized. Please refresh
+                      in a moment.
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={fetchTokenBalances}
-                    disabled={isLoadingBalances}
-                    className="rounded-xl border-gray-300 bg-gray-50 text-gray-700 hover:bg-gray-100"
-                  >
-                    <RefreshCw
-                      className={`h-4 w-4 ${isLoadingBalances ? 'animate-spin' : ''
-                        }`}
-                    />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setExportKeysModal(true)}
-                    className="rounded-xl border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
-                  >
-                    <Key className="mr-1 h-4 w-4" />
-                    Export
-                  </Button>
-                </div>
-              </div>
-            </DialogHeader>
+              )}
 
-            <div className="space-y-4">
-              {isLoadingWallet ? (
-                <div className="space-y-4">
-                  {[...Array(2)].map((_, i) => (
-                    <div
-                      key={i}
-                      className="h-40 animate-pulse rounded-2xl border border-gray-200 bg-gray-100"
-                    />
-                  ))}
-                </div>
-              ) : (
-                <>
-                  {/* Connection Status */}
-                  {publicKey && (
-                    <div className="relative overflow-hidden rounded-xl border border-green-200 bg-green-100 p-4">
-                      <div className="absolute inset-0 bg-gradient-to-r from-green-100/50 to-emerald-100/50"></div>
-                      <div className="relative flex items-start gap-3">
-                        <CheckCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-green-600" />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-green-800">
-                            Wallet Connected
-                          </p>
-                          <p className="text-xs text-green-700">
-                            Your Solana wallet is connected and ready to use.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Wallet Cards */}
-                  {walletInfo?.solana?.address && (
-                    <WalletRow
-                      label="Solana Wallet"
-                      address={walletInfo.solana.address}
-                      network="solana"
-                      isMain={true}
-                    />
-                  )}
-
-                  {/* Portfolio Summary */}
-                  {tokenBalances && isAuthenticated && (
-                    <div className="relative overflow-hidden rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 to-cyan-50 p-6">
-                      <div className="absolute inset-0 bg-gradient-to-r from-blue-100/20 via-transparent to-cyan-100/20"></div>
-                      <div className="relative">
-                        <div className="mb-4 flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-blue-200 bg-blue-100">
-                            <TrendingUp className="h-5 w-5 text-blue-600" />
-                          </div>
-                          <div>
-                            <h3 className="text-lg font-semibold text-blue-700">
-                              Portfolio Overview
-                            </h3>
-                            <p className="text-sm text-blue-600">
-                              Your token holdings across networks
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="grid gap-4 sm:grid-cols-2">
-                          {Object.entries(tokenBalances).map(
-                            ([tokenKey, tokenData]) => {
-                              const balance = formatBalance(tokenData.balance);
-                              const hasBalance = parseFloat(tokenData.balance) > 0;
-
-                              return (
-                                <div
-                                  key={tokenKey}
-                                  className="relative overflow-hidden rounded-xl border border-white bg-white p-4"
-                                >
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                      <span className="text-lg">
-                                        {getTokenIcon(tokenData.symbol)}
-                                      </span>
-                                      <div>
-                                        <span className="text-sm font-semibold text-gray-900">
-                                          {tokenData.symbol}
-                                        </span>
-                                        <p className="text-xs text-gray-500">
-                                          {tokenKey.includes('solana')
-                                            ? 'Solana'
-                                            : tokenKey.includes('polygon')
-                                              ? 'Polygon'
-                                              : 'Solana'}
-                                        </p>
-                                      </div>
-                                    </div>
-                                    <div className="text-right">
-                                      <span
-                                        className={`text-sm font-bold ${hasBalance
-                                            ? 'text-gray-900'
-                                            : 'text-gray-400'
-                                          }`}
-                                      >
-                                        {balance}
-                                      </span>
-                                      <p className="text-xs text-gray-500">
-                                        {tokenData.symbol}
-                                      </p>
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            }
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Security & Settings */}
-                  <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 p-6">
-                    <div className="absolute inset-0 bg-gradient-to-r from-gray-100/50 to-gray-50"></div>
-                    <div className="relative">
-                      <div className="mb-4 flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-300 bg-white">
-                          <Shield className="h-5 w-5 text-gray-600" />
-                        </div>
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-800">
-                            Security & Settings
-                          </h3>
-                          <p className="text-sm text-gray-600">
-                            Manage your wallet security and preferences
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setExportKeysModal(true)}
-                          className="h-12 rounded-xl border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
-                        >
-                          <Key className="mr-2 h-4 w-4" />
-                          Export Private Keys
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleDisconnect}
-                          className="h-12 rounded-xl border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
-                        >
-                          <LogOut className="mr-2 h-4 w-4" />
-                          Disconnect Wallet
-                        </Button>
-                      </div>
-                    </div>
+              {!isLoadingWallet && !hasAnyWalletData && (
+                <div className="relative overflow-hidden rounded-xl border border-red-500/30 bg-gradient-to-r from-red-600/20 to-blue-600/20 p-6 sm:p-8">
+                  <div className="relative text-center">
+                    <AlertCircle className="mx-auto mb-3 h-10 w-10 text-red-400 sm:h-12 sm:w-12" />
+                    <p className="mb-2 text-sm font-medium text-red-300 sm:text-base">
+                      No Wallets Found
+                    </p>
+                    <p className="text-xs text-red-200/70 sm:text-sm">
+                      Please authenticate your wallet to continue.
+                    </p>
                   </div>
-                </>
+                </div>
               )}
             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
-      {/* Export Keys Modal */}
-      <Dialog open={exportKeysModal} onOpenChange={setExportKeysModal}>
-        <DialogContent className="max-h-[90vh] w-[95vw] max-w-md overflow-y-auto border border-red-200 bg-white shadow-2xl backdrop-blur-md sm:max-w-lg">
-          <div className="absolute inset-0 bg-white"></div>
-          <div className="relative">
-            <DialogHeader className="space-y-4 pb-6">
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-red-200 bg-red-100">
-                  <AlertCircle className="h-6 w-6 text-red-600" />
-                </div>
-                <div className="flex-1">
-                  <DialogTitle className="text-xl font-bold text-red-700">
-                    Export Private Keys
-                  </DialogTitle>
-                  <p className="text-sm text-red-600">
-                    Access your private keys (Advanced users only)
-                  </p>
-                </div>
-              </div>
-            </DialogHeader>
-
-            <div className="space-y-6">
-              {/* Warning Section */}
-              <div className="relative overflow-hidden rounded-xl border border-red-200 bg-red-100 p-6">
-                <div className="absolute inset-0 bg-gradient-to-r from-red-100/50 to-rose-100/50"></div>
-                <div className="relative">
-                  <div className="mb-4 flex items-start gap-3">
-                    <AlertCircle className="mt-1 h-5 w-5 flex-shrink-0 text-red-600" />
-                    <div>
-                      <p className="mb-2 text-sm font-semibold text-red-800">
-                        🚨 Critical Security Warning
-                      </p>
-                      <div className="space-y-2 text-xs text-red-700">
-                        <p>• Never share your private keys with anyone</p>
-                        <p>• Store them securely offline</p>
-                        <p>• Anyone with access can steal your funds</p>
-                        <p>• Only export if absolutely necessary</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Key Export Options - Private keys are managed server-side for security */}
-              <div className="space-y-4">
-                <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-center">
-                  <p className="text-sm text-gray-600">
-                    Private keys are securely managed by MaskedCash and cannot be exported directly.
-                    Your wallet is protected with enterprise-grade security.
-                  </p>
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div className="flex justify-end">
+            {/* Footer Actions - Responsive */}
+            <div className="flex flex-col items-stretch justify-between gap-2 pt-4 sm:flex-row sm:items-center sm:gap-3 sm:pt-6">
+              {isAuthenticated && hasCustodialWallets && (
                 <Button
-                  onClick={() => setExportKeysModal(false)}
-                  className="h-10 rounded-xl bg-gray-600 text-white hover:bg-gray-500"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setExportKeysModal(true)}
+                  className="h-9 rounded-lg border-red-400/30 bg-red-500/10 text-xs text-red-300 hover:bg-red-500/20 sm:h-auto sm:text-sm"
                 >
-                  Close
+                  <Key className="mr-1 h-3 w-3 sm:mr-2 sm:h-4 sm:w-4" />
+                  Export Keys
                 </Button>
-              </div>
+              )}
+              <Button
+                variant="outline"
+                onClick={onClose}
+                className="h-9 rounded-lg border-slate-600/50 bg-slate-800/50 text-xs text-slate-300 hover:bg-slate-700/50 sm:ml-auto sm:h-auto sm:text-sm"
+              >
+                Close
+              </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Deposit/Withdraw Modal */}
       <DepositWithdrawModal
         isOpen={depositWithdrawModal.isOpen}
         onClose={() =>
-          setDepositWithdrawModal(prev => ({ ...prev, isOpen: false }))
+          setDepositWithdrawModal({
+            isOpen: false,
+            type: 'deposit',
+            network: 'solana',
+          })
         }
         type={depositWithdrawModal.type}
         walletInfo={walletInfo}
         tokenBalances={tokenBalances}
         network={depositWithdrawModal.network}
       />
+
+      <ExportKeysModal
+        isOpen={exportKeysModal}
+        onClose={() => setExportKeysModal(false)}
+      />
     </>
+  );
+}
+
+interface ExportKeysModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+function ExportKeysModal({ isOpen, onClose }: ExportKeysModalProps) {
+  const [confirmationText, setConfirmationText] = useState('');
+  const [exportedKeys, setExportedKeys] = useState<Record<
+    string,
+    string
+  > | null>(null);
+  const [showKeys, setShowKeys] = useState(false);
+  const [step, setStep] = useState<'confirm' | 'export' | 'display'>('confirm');
+
+  const requiredConfirmation = 'I_UNDERSTAND_THE_RISKS';
+
+  const handleExport = async () => {
+    if (confirmationText !== requiredConfirmation) {
+      toast.error('Please type the exact confirmation text');
+      return;
+    }
+
+    try {
+      setStep('export');
+
+      const response = await authService.makeAuthenticatedRequest(
+        '/api/wallet/export-keys',
+        {
+          method: 'POST',
+          data: {
+            confirmation: requiredConfirmation,
+          },
+        }
+      );
+
+      setExportedKeys(response.keys);
+      setStep('display');
+      toast.success('Private keys exported successfully');
+    } catch (error: unknown) {
+      toast.error(
+        `Failed to export keys: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+      setStep('confirm');
+    }
+  };
+
+  const copyKeyToClipboard = async (key: string, network: string) => {
+    try {
+      await navigator.clipboard.writeText(key);
+      toast.success(`${network} private key copied to clipboard`);
+    } catch {
+      toast.error('Failed to copy private key');
+    }
+  };
+
+  const handleClose = () => {
+    setConfirmationText('');
+    setExportedKeys(null);
+    setShowKeys(false);
+    setStep('confirm');
+    onClose();
+  };
+
+  const downloadKeysAsFile = () => {
+    if (!exportedKeys) return;
+
+    const keysData = {
+      exported_at: new Date().toISOString(),
+      warning:
+        'SECURITY WARNING: These private keys provide full access to your wallet. Store them securely and never share them.',
+      keys: exportedKeys,
+    };
+
+    const blob = new Blob([JSON.stringify(keysData, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `wallet-private-keys-${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast.success('Private keys downloaded as JSON file');
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="w-[95vw] max-w-md border border-red-500/30 bg-gradient-to-br from-slate-900/95 via-red-900/30 to-slate-900/95 sm:max-w-lg">
+        <div className="relative">
+          <DialogHeader className="space-y-4 pb-6">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-red-400/30 bg-gradient-to-r from-red-500/20 to-blue-500/20">
+                <Shield className="h-6 w-6 text-red-400" />
+              </div>
+              <div className="flex-1">
+                <DialogTitle className="text-xl font-bold text-red-300">
+                  Export Private Keys
+                </DialogTitle>
+                <p className="text-sm text-slate-400">
+                  Extreme caution required
+                </p>
+              </div>
+            </div>
+          </DialogHeader>
+
+          {step === 'confirm' && (
+            <div className="space-y-6">
+              {/* Security Warnings */}
+              <div className="space-y-4">
+                <div className="relative overflow-hidden rounded-xl border border-red-500/30 bg-gradient-to-r from-red-600/20 to-blue-600/20 p-6">
+                  <div className="absolute inset-0 bg-gradient-to-r from-red-500/5 to-blue-500/10"></div>
+                  <div className="relative">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="mt-0.5 h-6 w-6 flex-shrink-0 text-red-400" />
+                      <div className="text-sm text-red-200">
+                        <p className="mb-3 font-bold text-red-300">
+                          🚨 CRITICAL SECURITY WARNING
+                        </p>
+                        <div className="space-y-2">
+                          <p>
+                            Private keys provide{' '}
+                            <strong>complete control</strong> over your wallet
+                            and funds.
+                          </p>
+                          <p>
+                            <strong>
+                              Never share your private keys with anyone!
+                            </strong>
+                          </p>
+                          <p>Anyone with access to these keys can:</p>
+                          <ul className="mt-2 ml-3 list-inside list-disc space-y-1">
+                            <li>Steal all your funds</li>
+                            <li>Make unauthorized transactions</li>
+                            <li>Access your wallet from anywhere</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="relative overflow-hidden rounded-xl border border-slate-500/30 bg-gradient-to-r from-slate-600/20 to-blue-600/20 p-4">
+                  <div className="absolute inset-0 bg-gradient-to-r from-slate-500/5 to-blue-500/10"></div>
+                  <div className="relative">
+                    <div className="flex items-start gap-3">
+                      <Lock className="mt-0.5 h-5 w-5 flex-shrink-0 text-slate-400" />
+                      <div className="text-sm text-slate-200">
+                        <p className="mb-2 font-medium">
+                          Security Best Practices:
+                        </p>
+                        <ul className="list-inside list-disc space-y-1 text-xs">
+                          <li>Store keys offline in secure location</li>
+                          <li>Use hardware wallet or encrypted storage</li>
+                          <li>Never enter keys on untrusted websites</li>
+                          <li>Create secure backups in multiple locations</li>
+                          <li>Consider using a password manager</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Label className="text-sm font-medium text-red-300">
+                  Type to confirm:{' '}
+                  <code className="rounded border border-red-500/30 bg-slate-800/50 px-2 py-1 font-mono text-xs">
+                    {requiredConfirmation}
+                  </code>
+                </Label>
+                <Input
+                  placeholder="Type the confirmation text exactly"
+                  value={confirmationText}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfirmationText(e.target.value)}
+                  className="border-red-500/30 bg-slate-800/50 font-mono text-white focus:border-red-400/50"
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={handleClose}
+                  className="flex-1 rounded-xl border-slate-600/50 bg-slate-800/50 text-slate-300 hover:bg-slate-700/50"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleExport}
+                  disabled={confirmationText !== requiredConfirmation}
+                  className="flex-1 rounded-xl bg-gradient-to-r from-red-600 to-blue-600 font-semibold hover:from-red-500 hover:to-blue-500"
+                >
+                  <Unlock className="mr-2 h-5 w-5" />
+                  Export Keys
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {step === 'export' && (
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="relative mb-6">
+                <RefreshCw className="h-12 w-12 animate-spin text-red-400" />
+                <div className="absolute inset-0 animate-ping">
+                  <div className="h-12 w-12 rounded-full border-2 border-red-400/30"></div>
+                </div>
+              </div>
+              <p className="mb-2 font-medium text-red-300">
+                Exporting private keys...
+              </p>
+              <p className="text-xs text-slate-400">
+                This may take a moment for security
+              </p>
+            </div>
+          )}
+
+          {step === 'display' && exportedKeys && (
+            <div className="space-y-6">
+              <div className="relative overflow-hidden rounded-xl border border-green-500/30 bg-gradient-to-r from-green-600/20 to-blue-600/20 p-4">
+                <div className="absolute inset-0 bg-gradient-to-r from-green-500/5 to-blue-500/10"></div>
+                <div className="relative">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-400" />
+                    <span className="text-sm font-medium text-green-300">
+                      Private keys exported successfully
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {exportedKeys.solana && (
+                  <div className="relative overflow-hidden rounded-xl border border-slate-500/30 bg-gradient-to-r from-slate-600/20 to-slate-600/20 p-4">
+                    <div className="absolute inset-0 bg-gradient-to-r from-slate-500/5 to-slate-500/10"></div>
+                    <div className="relative">
+                      <div className="mb-3 flex items-center gap-2">
+                        <span className="text-lg">🟣</span>
+                        <span className="text-sm font-medium text-slate-300">
+                          Solana Network Key
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 rounded-lg border border-slate-700/50 bg-slate-800/50 p-3">
+                        <code
+                          className={`flex-1 font-mono text-xs break-all ${!showKeys ? 'select-none' : ''} text-slate-300`}
+                        >
+                          {showKeys ? exportedKeys.solana : '•'.repeat(64)}
+                        </code>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() =>
+                            copyKeyToClipboard(exportedKeys.solana, 'Solana')
+                          }
+                          className="text-slate-400 hover:bg-slate-500/10 hover:text-slate-300"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center justify-center gap-4 py-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowKeys(!showKeys)}
+                  className="border-slate-600/50 bg-slate-800/50 text-slate-300 hover:bg-slate-700/50"
+                >
+                  {showKeys ? (
+                    <EyeOff className="mr-2 h-4 w-4" />
+                  ) : (
+                    <Eye className="mr-2 h-4 w-4" />
+                  )}
+                  {showKeys ? 'Hide Keys' : 'Reveal Keys'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={downloadKeysAsFile}
+                  className="border-blue-400/30 bg-blue-500/10 text-blue-300 hover:bg-blue-500/20"
+                >
+                  <ArrowDownToLine className="mr-2 h-4 w-4" />
+                  Download JSON
+                </Button>
+              </div>
+
+              <div className="relative overflow-hidden rounded-xl border border-yellow-500/30 bg-gradient-to-r from-yellow-600/20 to-blue-600/20 p-4">
+                <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/5 to-blue-500/10"></div>
+                <div className="relative">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-yellow-400" />
+                    <div className="text-sm text-yellow-200">
+                      <p className="mb-1 font-medium">
+                        Final Security Reminder:
+                      </p>
+                      <p>
+                        Store these keys securely and delete them from this
+                        device when done. Never share them with anyone.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <Button
+                onClick={handleClose}
+                className="h-12 w-full rounded-xl bg-gradient-to-r from-slate-700 to-slate-600 font-semibold hover:from-slate-600 hover:to-slate-500"
+              >
+                Done
+              </Button>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

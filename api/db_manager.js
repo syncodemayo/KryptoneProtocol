@@ -42,6 +42,9 @@ class DatabaseManager {
 
     // Generate a new IV for each encryption operation
     this.getNewIV = () => randomBytes(16);
+
+    // Initialize admin master key for key escrow (lazy initialization)
+    this.adminMasterKey = null;
   }
 
   initializeDatabase() {
@@ -98,6 +101,105 @@ class DatabaseManager {
     this.stmtIsRegisteredWithShadowPay = this.db.prepare(
       'SELECT registered_with_shadowpay FROM wallets WHERE solana_address = ?'
     );
+
+    // ===== MESSAGING TABLES =====
+
+    // Create conversations table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS conversations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        conversation_id TEXT UNIQUE NOT NULL,
+        buyer_address TEXT NOT NULL,
+        seller_address TEXT NOT NULL,
+        last_message_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (buyer_address) REFERENCES wallets (solana_address),
+        FOREIGN KEY (seller_address) REFERENCES wallets (solana_address)
+      )
+    `);
+
+    // Create messages table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        conversation_id TEXT NOT NULL,
+        sender_address TEXT NOT NULL,
+        recipient_address TEXT NOT NULL,
+        message_text TEXT NOT NULL,
+        encrypted_message TEXT,
+        encryption_metadata TEXT,
+        is_encrypted INTEGER DEFAULT 0,
+        read_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (sender_address) REFERENCES wallets (solana_address),
+        FOREIGN KEY (recipient_address) REFERENCES wallets (solana_address)
+      )
+    `);
+
+    // Create trades table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS trades (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        trade_id TEXT UNIQUE NOT NULL,
+        conversation_id TEXT,
+        seller_address TEXT NOT NULL,
+        buyer_address TEXT NOT NULL,
+        item_name TEXT NOT NULL,
+        description TEXT,
+        price_sol TEXT NOT NULL,
+        price_lamports INTEGER NOT NULL,
+        status TEXT NOT NULL,
+        deposit_tx_signature TEXT,
+        deposit_confirmed_at TIMESTAMP,
+        settle_tx_signature TEXT,
+        settled_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (seller_address) REFERENCES wallets (solana_address),
+        FOREIGN KEY (buyer_address) REFERENCES wallets (solana_address)
+      )
+    `);
+
+    // Create user_encryption_keys table (for E2EE with key escrow)
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS user_encryption_keys (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        solana_address TEXT UNIQUE NOT NULL,
+        public_key TEXT NOT NULL,
+        encrypted_private_key TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (solana_address) REFERENCES wallets (solana_address)
+      )
+    `);
+
+    // Create admin_access_log table (for audit trail)
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS admin_access_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        conversation_id TEXT NOT NULL,
+        admin_address TEXT NOT NULL,
+        access_reason TEXT,
+        dispute_id TEXT,
+        messages_decrypted INTEGER,
+        accessed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Create indexes for messaging tables
+    try {
+      this.db.exec('CREATE INDEX IF NOT EXISTS idx_conversations_buyer ON conversations(buyer_address)');
+      this.db.exec('CREATE INDEX IF NOT EXISTS idx_conversations_seller ON conversations(seller_address)');
+      this.db.exec('CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id)');
+      this.db.exec('CREATE INDEX IF NOT EXISTS idx_messages_sender ON messages(sender_address)');
+      this.db.exec('CREATE INDEX IF NOT EXISTS idx_messages_recipient ON messages(recipient_address)');
+      this.db.exec('CREATE INDEX IF NOT EXISTS idx_trades_buyer ON trades(buyer_address)');
+      this.db.exec('CREATE INDEX IF NOT EXISTS idx_trades_seller ON trades(seller_address)');
+      this.db.exec('CREATE INDEX IF NOT EXISTS idx_trades_status ON trades(status)');
+      this.db.exec('CREATE INDEX IF NOT EXISTS idx_admin_access_conversation ON admin_access_log(conversation_id)');
+    } catch (_error) {
+      console.warn('Indexes already exist or error creating:', _error?.message);
+    }
   }
 
   encryptData(data) {
@@ -199,6 +301,398 @@ class DatabaseManager {
       return result ? result.registered_with_shadowpay === 1 : false;
     } catch (error) {
       console.error('Error checking ShadowPay registration:', error);
+      return false;
+    }
+  }
+
+  // ===== MESSAGING METHODS =====
+
+  // Initialize admin master key for key escrow
+  initializeAdminMasterKey() {
+    if (!process.env.ADMIN_MASTER_KEY) {
+      throw new Error('ADMIN_MASTER_KEY environment variable is required for key escrow');
+    }
+
+    try {
+      this.adminMasterKey = Buffer.from(process.env.ADMIN_MASTER_KEY, 'hex');
+      if (this.adminMasterKey.length !== 32) {
+        throw new Error('ADMIN_MASTER_KEY must be a 64-character hex string (32 bytes)');
+      }
+    } catch (error) {
+      throw new Error(`Invalid ADMIN_MASTER_KEY: ${error.message}`);
+    }
+  }
+
+  // Encrypt private key with admin master key (for escrow)
+  encryptPrivateKeyForEscrow(privateKey) {
+    if (!this.adminMasterKey) {
+      this.initializeAdminMasterKey();
+    }
+    return this.encryptDataWithKey(privateKey, this.adminMasterKey);
+  }
+
+  // Decrypt private key from escrow (admin only)
+  decryptPrivateKeyFromEscrow(encryptedPrivateKey) {
+    if (!this.adminMasterKey) {
+      this.initializeAdminMasterKey();
+    }
+    return this.decryptDataWithKey(encryptedPrivateKey, this.adminMasterKey);
+  }
+
+  // Helper to encrypt with a specific key
+  encryptDataWithKey(data, key) {
+    const iv = this.getNewIV();
+    const cipher = createCipheriv('aes-256-gcm', key, iv);
+    const jsonData = JSON.stringify(data);
+    let encryptedData = cipher.update(jsonData, 'utf8', 'hex');
+    encryptedData += cipher.final('hex');
+    const authTag = cipher.getAuthTag();
+
+    return JSON.stringify({
+      iv: iv.toString('hex'),
+      encryptedData,
+      authTag: authTag.toString('hex'),
+    });
+  }
+
+  // Helper to decrypt with a specific key
+  decryptDataWithKey(encryptedJson, key) {
+    const { iv, encryptedData, authTag } = JSON.parse(encryptedJson);
+    const decipher = createDecipheriv('aes-256-gcm', key, Buffer.from(iv, 'hex'));
+    decipher.setAuthTag(Buffer.from(authTag, 'hex'));
+
+    let decryptedData = decipher.update(encryptedData, 'hex', 'utf8');
+    decryptedData += decipher.final('utf8');
+    return JSON.parse(decryptedData);
+  }
+
+  // Conversation methods
+  createConversation(conversationId, buyerAddress, sellerAddress) {
+    try {
+      const stmt = this.db.prepare(`
+        INSERT INTO conversations (conversation_id, buyer_address, seller_address, last_message_at)
+        VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(conversation_id) DO UPDATE SET
+          last_message_at = CURRENT_TIMESTAMP
+      `);
+      stmt.run(conversationId, buyerAddress, sellerAddress);
+      return { conversationId, buyerAddress, sellerAddress };
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+      throw error;
+    }
+  }
+
+  getConversation(conversationId) {
+    try {
+      const stmt = this.db.prepare('SELECT * FROM conversations WHERE conversation_id = ?');
+      return stmt.get(conversationId) || null;
+    } catch (error) {
+      console.error('Error getting conversation:', error);
+      return null;
+    }
+  }
+
+  getUserConversations(solanaAddress) {
+    try {
+      const stmt = this.db.prepare(`
+        SELECT * FROM conversations 
+        WHERE buyer_address = ? OR seller_address = ?
+        ORDER BY last_message_at DESC
+      `);
+      return stmt.all(solanaAddress, solanaAddress);
+    } catch (error) {
+      console.error('Error getting user conversations:', error);
+      return [];
+    }
+  }
+
+  updateConversationLastMessage(conversationId) {
+    try {
+      const stmt = this.db.prepare(`
+        UPDATE conversations SET last_message_at = CURRENT_TIMESTAMP 
+        WHERE conversation_id = ?
+      `);
+      stmt.run(conversationId);
+      return true;
+    } catch (error) {
+      console.error('Error updating conversation:', error);
+      return false;
+    }
+  }
+
+  // Message methods
+  saveMessage(messageData) {
+    try {
+      const stmt = this.db.prepare(`
+        INSERT INTO messages (
+          conversation_id, sender_address, recipient_address, message_text,
+          encrypted_message, encryption_metadata, is_encrypted
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      `);
+      const info = stmt.run(
+        messageData.conversationId,
+        messageData.senderAddress,
+        messageData.recipientAddress,
+        messageData.messageText || '',
+        messageData.encryptedMessage || null,
+        messageData.encryptionMetadata || null,
+        messageData.isEncrypted ? 1 : 0
+      );
+      return { id: info.lastInsertRowid, ...messageData };
+    } catch (error) {
+      console.error('Error saving message:', error);
+      throw error;
+    }
+  }
+
+  getMessages(conversationId, limit = 50, offset = 0) {
+    try {
+      const stmt = this.db.prepare(`
+        SELECT * FROM messages 
+        WHERE conversation_id = ?
+        ORDER BY created_at DESC
+        LIMIT ? OFFSET ?
+      `);
+      return stmt.all(conversationId, limit, offset).reverse(); // Reverse to get chronological order
+    } catch (error) {
+      console.error('Error getting messages:', error);
+      return [];
+    }
+  }
+
+  // ===== TRADE METHODS =====
+
+  createTrade(tradeData) {
+    try {
+      const stmt = this.db.prepare(`
+        INSERT INTO trades (
+          trade_id, conversation_id, seller_address, buyer_address,
+          item_name, description, price_sol, price_lamports, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      stmt.run(
+        tradeData.tradeId,
+        tradeData.conversationId || null,
+        tradeData.sellerAddress,
+        tradeData.buyerAddress,
+        tradeData.itemName,
+        tradeData.description || null,
+        tradeData.priceSol,
+        tradeData.priceLamports,
+        tradeData.status
+      );
+      return this.getTrade(tradeData.tradeId);
+    } catch (error) {
+      console.error('Error creating trade:', error);
+      throw error;
+    }
+  }
+
+  getTrade(tradeId) {
+    try {
+      const stmt = this.db.prepare('SELECT * FROM trades WHERE trade_id = ?');
+      return stmt.get(tradeId) || null;
+    } catch (error) {
+      console.error('Error getting trade:', error);
+      return null;
+    }
+  }
+
+  getTradesForUser(solanaAddress) {
+    try {
+      const stmt = this.db.prepare(`
+        SELECT * FROM trades
+        WHERE buyer_address = ? OR seller_address = ?
+        ORDER BY created_at DESC
+      `);
+      return stmt.all(solanaAddress, solanaAddress);
+    } catch (error) {
+      console.error('Error getting trades for user:', error);
+      return [];
+    }
+  }
+
+  updateTradeStatus(tradeId, status) {
+    try {
+      const stmt = this.db.prepare(`
+        UPDATE trades SET status = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE trade_id = ?
+      `);
+      stmt.run(status, tradeId);
+      return true;
+    } catch (error) {
+      console.error('Error updating trade status:', error);
+      return false;
+    }
+  }
+
+  setTradeDepositSignature(tradeId, txSignature) {
+    try {
+      const stmt = this.db.prepare(`
+        UPDATE trades SET deposit_tx_signature = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE trade_id = ?
+      `);
+      stmt.run(txSignature, tradeId);
+      return true;
+    } catch (error) {
+      console.error('Error saving trade deposit signature:', error);
+      return false;
+    }
+  }
+
+  setTradeDepositConfirmed(tradeId) {
+    try {
+      const stmt = this.db.prepare(`
+        UPDATE trades SET status = ?, deposit_confirmed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+        WHERE trade_id = ?
+      `);
+      stmt.run('DEPOSIT_CONFIRMED', tradeId);
+      return true;
+    } catch (error) {
+      console.error('Error setting trade deposit confirmed:', error);
+      return false;
+    }
+  }
+
+  setTradeSettled(tradeId, txSignature) {
+    try {
+      const stmt = this.db.prepare(`
+        UPDATE trades SET status = ?, settle_tx_signature = ?, settled_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+        WHERE trade_id = ?
+      `);
+      stmt.run('SUCCESS', txSignature, tradeId);
+      return true;
+    } catch (error) {
+      console.error('Error setting trade settled:', error);
+      return false;
+    }
+  }
+
+  markMessageAsRead(messageId, solanaAddress) {
+    try {
+      const stmt = this.db.prepare(`
+        UPDATE messages SET read_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND recipient_address = ?
+      `);
+      stmt.run(messageId, solanaAddress);
+      return true;
+    } catch (error) {
+      console.error('Error marking message as read:', error);
+      return false;
+    }
+  }
+
+  // Encryption key methods
+  storeEncryptionKeys(solanaAddress, publicKey, privateKey) {
+    try {
+      // Encrypt private key with admin master key for escrow
+      const encryptedPrivateKey = this.encryptPrivateKeyForEscrow(privateKey);
+
+      const stmt = this.db.prepare(`
+        INSERT INTO user_encryption_keys (solana_address, public_key, encrypted_private_key)
+        VALUES (?, ?, ?)
+        ON CONFLICT(solana_address) DO UPDATE SET
+          public_key = excluded.public_key,
+          encrypted_private_key = excluded.encrypted_private_key,
+          updated_at = CURRENT_TIMESTAMP
+      `);
+      stmt.run(solanaAddress, publicKey, encryptedPrivateKey);
+      return true;
+    } catch (error) {
+      console.error('Error storing encryption keys:', error);
+      throw error;
+    }
+  }
+
+  getPublicKey(solanaAddress) {
+    try {
+      const stmt = this.db.prepare('SELECT public_key FROM user_encryption_keys WHERE solana_address = ?');
+      const result = stmt.get(solanaAddress);
+      return result ? result.public_key : null;
+    } catch (error) {
+      console.error('Error getting public key:', error);
+      return null;
+    }
+  }
+
+  getEncryptedPrivateKey(solanaAddress) {
+    try {
+      const stmt = this.db.prepare('SELECT encrypted_private_key FROM user_encryption_keys WHERE solana_address = ?');
+      const result = stmt.get(solanaAddress);
+      return result ? result.encrypted_private_key : null;
+    } catch (error) {
+      console.error('Error getting encrypted private key:', error);
+      return null;
+    }
+  }
+
+  // Get decrypted private key for user (for client-side decryption)
+  getDecryptedPrivateKey(solanaAddress) {
+    try {
+      const encrypted = this.getEncryptedPrivateKey(solanaAddress);
+      if (!encrypted) return null;
+      return this.decryptPrivateKeyFromEscrow(encrypted);
+    } catch (error) {
+      console.error('Error decrypting private key:', error);
+      return null;
+    }
+  }
+
+  // Admin method to decrypt private key
+  decryptPrivateKeyForAdmin(solanaAddress) {
+    try {
+      const encrypted = this.getEncryptedPrivateKey(solanaAddress);
+      if (!encrypted) return null;
+      return this.decryptPrivateKeyFromEscrow(encrypted);
+    } catch (error) {
+      console.error('Error decrypting private key for admin:', error);
+      throw error;
+    }
+  }
+
+  // Admin access logging
+  logAdminAccess(accessData) {
+    try {
+      const stmt = this.db.prepare(`
+        INSERT INTO admin_access_log (
+          conversation_id, admin_address, access_reason, dispute_id, messages_decrypted
+        ) VALUES (?, ?, ?, ?, ?)
+      `);
+      stmt.run(
+        accessData.conversationId,
+        accessData.adminAddress,
+        accessData.reason || null,
+        accessData.disputeId || null,
+        accessData.messagesDecrypted || 0
+      );
+      return true;
+    } catch (error) {
+      console.error('Error logging admin access:', error);
+      return false;
+    }
+  }
+
+  getAdminAccessLog(conversationId) {
+    try {
+      const stmt = this.db.prepare(`
+        SELECT * FROM admin_access_log 
+        WHERE conversation_id = ?
+        ORDER BY accessed_at DESC
+      `);
+      return stmt.all(conversationId);
+    } catch (error) {
+      console.error('Error getting admin access log:', error);
+      return [];
+    }
+  }
+
+  // Check if user is Seller
+  isSeller(solanaAddress) {
+    try {
+      const wallet = this.getWallet(solanaAddress);
+      return wallet?.userType === 'Seller';
+    } catch {
       return false;
     }
   }
