@@ -98,8 +98,25 @@ class WebSocketServer {
               // Create it on the fly
               conversation = await this.messageManager.createOrGetConversation(trade.buyer_address, trade.seller_address, tradeId);
           } else {
-              socket.emit('error', { message: 'Conversation not found' });
-              return;
+              // Check if it looks like a direct chat (addr_addr)
+              const parts = conversationId.split('_');
+              if (parts.length === 2 && !conversationId.startsWith('trade_')) {
+                  const p0 = parts[0].toLowerCase();
+                  const p1 = parts[1].toLowerCase();
+                  const me = solanaAddress.toLowerCase();
+                  
+                  if (me === p0 || me === p1) {
+                      // Valid direct chat format and user is a participant
+                      // We allow joining this "potential" room
+                      conversation = { conversation_id: `${p0}_${p1}` }; // Temporary object for room name
+                  } else {
+                     socket.emit('error', { message: 'Access denied to this conversation' });
+                     return;
+                  }
+              } else {
+                  socket.emit('error', { message: 'Conversation not found' });
+                  return;
+              }
           }
 
           // Join the room using the DB-provided normalization
