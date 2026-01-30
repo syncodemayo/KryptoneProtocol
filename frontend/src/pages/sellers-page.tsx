@@ -13,7 +13,7 @@ interface Seller {
   name: string;
   type: string;
   createdAt?: string;
-  completionRate?: number;
+  completionRate?: number | null;
 }
 
 export function SellersPage() {
@@ -75,8 +75,8 @@ export function SellersPage() {
                 <CardTitle className="text-lg font-medium">
                   {seller.name}
                 </CardTitle>
-                <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
-                   <User className="h-4 w-4 text-primary" />
+                <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center">
+                   <User className="h-4 w-4 text-white" />
                 </div>
               </CardHeader>
               <CardContent>
@@ -84,7 +84,7 @@ export function SellersPage() {
                   {seller.address}
                 </div>
                 <CardDescription className="pt-2 text-gray-400">
-                  {seller.completionRate !== undefined ? `${seller.completionRate}% Completion Rate` : 'No Rating Yet'}
+                  {seller.completionRate != null ? `${seller.completionRate}% Completion Rate` : 'No Rating Yet'}
                 </CardDescription>
               </CardContent>
               <CardFooter>
