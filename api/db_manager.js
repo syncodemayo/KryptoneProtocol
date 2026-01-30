@@ -299,7 +299,7 @@ class DatabaseManager {
         const address = result.solana_address;
         const stats = statsMap[address] || { total_finalized: 0, successful: 0 };
         
-        let completionRate = 100; // Default for new sellers
+        let completionRate = null; // Default for new sellers
         if (stats.total_finalized > 0) {
             completionRate = Math.round((stats.successful / stats.total_finalized) * 100);
         }
