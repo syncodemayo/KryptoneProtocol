@@ -151,14 +151,9 @@ export function ChatPage() {
     const text = newMessage;
     setNewMessage('');
 
-    // Optimistic update
-    const optimisticId = `opt_${Date.now()}`;
-    setMessages(prev => [...prev, {
-        id: optimisticId,
-        sender: 'me',
-        content: text,
-        timestamp: Date.now()
-    }]);
+    // Optimistic update removed to prevent duplicates with server echo
+    // The server confirms via 'message_sent' or broadcasts 'message_received'
+    // We rely on the broadcast to add the message with the correct ID
 
     socketRef.current.emit('send_message', {
         conversationId,

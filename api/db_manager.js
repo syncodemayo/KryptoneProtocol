@@ -521,7 +521,7 @@ class DatabaseManager {
     try {
       const stmt = this.db.prepare(`
         SELECT * FROM messages 
-        WHERE conversation_id = ?
+        WHERE LOWER(conversation_id) = LOWER(?)
         ORDER BY created_at DESC
         LIMIT ? OFFSET ?
       `);
