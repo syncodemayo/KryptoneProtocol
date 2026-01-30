@@ -171,8 +171,26 @@ class WebSocketServer {
                   return;
               }
           } else {
-              socket.emit('error', { message: 'Conversation not found' });
-              return;
+              // Check if it looks like a direct chat (addr_addr)
+              const parts = conversationId.split('_');
+              if (parts.length === 2 && !conversationId.startsWith('trade_')) {
+                  const p0 = parts[0].toLowerCase();
+                  const p1 = parts[1].toLowerCase();
+                  const me = solanaAddress.toLowerCase();
+                  
+                  if (me === p0 || me === p1) {
+                      // Valid direct chat format and user is a participant
+                      // We rely on messageManager to create it
+                      // Pass null conversation to indicate it needs creation/checking in MessageManager
+                      conversation = null; 
+                  } else {
+                     socket.emit('error', { message: 'Access denied to this conversation' });
+                     return;
+                  }
+              } else {
+                  socket.emit('error', { message: 'Conversation not found' });
+                  return;
+              }
           }
 
           // Send message
