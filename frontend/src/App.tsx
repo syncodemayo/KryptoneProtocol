@@ -22,7 +22,8 @@ function AppContent() {
   }
   
   return (
-    <Layout>
+    <>
+      <Layout>
         <Routes>
           <Route path="/" element={<LandingPage />} />
           
@@ -50,8 +51,9 @@ function AppContent() {
           } />
         </Routes>
         <RegistrationModal />
-        <Toaster position="top-center" />
       </Layout>
+      <Toaster position="bottom-right" richColors theme="dark" closeButton />
+    </>
     );
 }
 
