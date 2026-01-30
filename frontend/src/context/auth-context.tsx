@@ -19,7 +19,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
   login: () => Promise<void>;
-  register: (name: string, type: UserType) => Promise<void>;
+  register: (type: UserType) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
   isInitializing: boolean;
@@ -210,7 +210,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const register = async (name: string, type: UserType) => {
+  const register = async (type: UserType) => {
     if (!publicKey || !signMessage) {
       toast.error('Wallet not connected');
       return;
@@ -265,7 +265,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const newUser: User = {
         address: publicKey.toBase58(),
-        name: data.message?.includes('already registered') ? (user?.name || name) : name,
+        name: data.message?.includes('already registered') ? (user?.name || 'User') : 'User',
         type: type,
       };
 
