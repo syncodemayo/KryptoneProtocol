@@ -599,6 +599,20 @@ class DatabaseManager {
     }
   }
 
+  updateTradeConversation(tradeId, conversationId) {
+    try {
+      const stmt = this.db.prepare(`
+        UPDATE trades SET conversation_id = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE trade_id = ?
+      `);
+      stmt.run(conversationId, tradeId);
+      return true;
+    } catch (error) {
+      console.error('Error updating trade conversation:', error);
+      return false;
+    }
+  }
+
   setTradeDepositSignature(tradeId, txSignature) {
     try {
       const stmt = this.db.prepare(`
