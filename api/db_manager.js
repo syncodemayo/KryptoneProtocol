@@ -267,7 +267,7 @@ class DatabaseManager {
   getAllSellers() {
     try {
       console.log('Executing getAllSellers query...');
-      const sellers = this.db.prepare("SELECT * FROM wallets WHERE user_type = 'Seller' OR user_type = 'seller'").all();
+      const sellers = this.db.prepare("SELECT * FROM wallets WHERE LOWER(user_type) = 'seller'").all();
       
       // Get trade statistics for all sellers
       const tradeStats = this.db.prepare(`
@@ -777,7 +777,8 @@ class DatabaseManager {
   isSeller(solanaAddress) {
     try {
       const wallet = this.getWallet(solanaAddress);
-      return wallet?.userType === 'Seller';
+      const ut = wallet?.userType || '';
+      return ut.toLowerCase() === 'seller';
     } catch {
       return false;
     }

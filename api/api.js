@@ -278,7 +278,8 @@ app.get('/api/user/info', async (req, res) => {
     };
 
     if (shadowPay.registered) {
-      shadowPay.userType = wallet?.userType || null;
+      const ut = wallet?.userType || '';
+      shadowPay.userType = ut.charAt(0).toUpperCase() + ut.slice(1).toLowerCase();
       shadowPay.commitment = wallet?.commitment || null;
       shadowPay.root = wallet?.root || null;
       shadowPay.api_key = wallet?.apiKey || null;
@@ -309,8 +310,9 @@ app.post('/api/user/register-shadowpay', async (req, res) => {
       });
     }
 
-    // Validate userType
-    if (userType !== 'Buyer' && userType !== 'Seller') {
+    // Validate userType (case-insensitive)
+    const normalizedUserType = userType.charAt(0).toUpperCase() + userType.slice(1).toLowerCase();
+    if (normalizedUserType !== 'Buyer' && normalizedUserType !== 'Seller') {
       return res.status(400).json({
         error: 'Invalid userType. Must be either "Buyer" or "Seller".',
       });
@@ -394,7 +396,7 @@ app.post('/api/user/register-shadowpay', async (req, res) => {
 
       // Initialize registration data object
       const registrationData = {
-        userType: userType,
+        userType: normalizedUserType,
         commitment: shadowPayData.commitment,
         root: shadowPayData.root,
         apiKey: keysData.api_key,
@@ -415,7 +417,7 @@ app.post('/api/user/register-shadowpay', async (req, res) => {
         registered: true,
         commitment: shadowPayData.commitment,
         root: shadowPayData.root,
-        userType: userType,
+        userType: normalizedUserType,
         api_key: keysData.api_key,
         message: 'Successfully registered with ShadowPay',
       });
