@@ -8,13 +8,7 @@ export function LandingPage() {
       <section className="relative pt-32 pb-40 overflow-hidden">
         <div className="container mx-auto px-4 md:px-6 relative z-30">
           <div className="max-w-5xl mx-auto text-center space-y-8">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium animate-in fade-in slide-in-from-bottom-4 duration-700 backdrop-blur-md">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-              </span>
-              Now Live on Solana Mainnet Beta
-            </div>
+            
             
             <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight text-white animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-100">
               Anonymous Privacy Escrow <br />

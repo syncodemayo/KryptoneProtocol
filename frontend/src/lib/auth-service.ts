@@ -1,6 +1,5 @@
 import axios, { type AxiosRequestConfig } from 'axios';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+import { API_BASE_URL } from './config';
 
 export interface AuthResponse {
   token: string;
@@ -45,6 +44,10 @@ class AuthService {
     this.token = localStorage.getItem('auth_token');
     this.polygonAddress = localStorage.getItem('polygon_address');
     this.safeWalletAddress = localStorage.getItem('safe_wallet_address');
+  }
+
+  setToken(token: string | null) {
+    this.token = token;
   }
 
   // Generate message for signing
@@ -351,6 +354,8 @@ class AuthService {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('polygon_address');
     localStorage.removeItem('safe_wallet_address');
+    localStorage.removeItem('shadowpay_token');
+    localStorage.removeItem('shadowpay_user');
   }
 }
 

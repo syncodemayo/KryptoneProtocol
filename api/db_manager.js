@@ -241,7 +241,8 @@ class DatabaseManager {
   }
 
   getWallet(solanaAddress) {
-    const address = solanaAddress.toLowerCase();
+    const address = solanaAddress;
+    console.log('solanaAddress', solanaAddress)
     const result = this.stmtGetWallet.get(address);
     if (!result) {
       throw new Error('No wallet found for this user');
@@ -282,7 +283,7 @@ class DatabaseManager {
       // Create a map for quick lookup
       const statsMap = {};
       tradeStats.forEach(stat => {
-        statsMap[stat.seller_address.toLowerCase()] = stat;
+        statsMap[stat.seller_address] = stat;
       });
 
       console.log(`Found ${sellers.length} sellers to process`);
@@ -295,10 +296,10 @@ class DatabaseManager {
             console.warn(`Failed to decrypt data for ${result.solana_address}`);
         }
 
-        const address = result.solana_address.toLowerCase();
+        const address = result.solana_address;
         const stats = statsMap[address] || { total_finalized: 0, successful: 0 };
         
-        let completionRate = 100; // Default for new sellers
+        let completionRate = null; // Default for new sellers
         if (stats.total_finalized > 0) {
             completionRate = Math.round((stats.successful / stats.total_finalized) * 100);
         }
@@ -320,7 +321,7 @@ class DatabaseManager {
   }
 
   walletExists(solanaAddress) {
-    const result = this.stmtWalletExists.get(solanaAddress.toLowerCase());
+    const result = this.stmtWalletExists.get(solanaAddress);
     return !!result;
   }
 
@@ -344,7 +345,7 @@ class DatabaseManager {
         treasuryWallet || null,
         publicKey || null,
         secretKey || null,
-        solanaAddress.toLowerCase()
+        solanaAddress
       );
       return true;
     } catch (error) {
@@ -427,8 +428,8 @@ class DatabaseManager {
   // Conversation methods
   createConversation(conversationId, buyerAddress, sellerAddress, lastMessageText = '') {
     try {
-      const b = buyerAddress.toLowerCase();
-      const s = sellerAddress.toLowerCase();
+      const b = buyerAddress;
+      const s = sellerAddress;
       const stmt = this.db.prepare(`
         INSERT INTO conversations (conversation_id, buyer_address, seller_address, last_message_at, last_message_text)
         VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?)
@@ -462,7 +463,7 @@ class DatabaseManager {
 
   getUserConversations(solanaAddress) {
     try {
-      const address = solanaAddress.toLowerCase();
+      const address = solanaAddress;
       const stmt = this.db.prepare(`
         SELECT * FROM conversations 
         WHERE buyer_address = ? OR seller_address = ?
@@ -502,8 +503,8 @@ class DatabaseManager {
       `);
       const info = stmt.run(
         messageData.conversationId,
-        messageData.senderAddress.toLowerCase(),
-        messageData.recipientAddress.toLowerCase(),
+        messageData.senderAddress,
+        messageData.recipientAddress,
         messageData.messageText || '',
         messageData.encryptedMessage || null,
         messageData.encryptionMetadata || null,
@@ -544,8 +545,8 @@ class DatabaseManager {
       stmt.run(
         tradeData.tradeId,
         tradeData.conversationId || null,
-        tradeData.sellerAddress.toLowerCase(),
-        tradeData.buyerAddress.toLowerCase(),
+        tradeData.sellerAddress,
+        tradeData.buyerAddress,
         tradeData.itemName,
         tradeData.description || null,
         tradeData.priceSol,
@@ -571,7 +572,7 @@ class DatabaseManager {
 
   getTradesForUser(solanaAddress) {
     try {
-      const address = solanaAddress.toLowerCase();
+      const address = solanaAddress;
       const stmt = this.db.prepare(`
         SELECT * FROM trades
         WHERE buyer_address = ? OR seller_address = ?

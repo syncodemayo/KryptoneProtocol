@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Package, ShieldCheck, Clock, CheckCircle2, XCircle, AlertCircle, ExternalLink, RefreshCw, Send, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 import { io, Socket } from 'socket.io-client';
+import { API_BASE_URL } from '@/lib/config';
 import { Input } from '@/components/ui/input';
 import { useRef } from 'react';
 import {
@@ -84,8 +85,8 @@ export function TradeDetailPage() {
         return;
     }
 
-    console.log('Initializing Socket.IO connection to http://localhost:5001');
-    const socket = io('http://localhost:5001', {
+    console.log(`Initializing Socket.IO connection to ${API_BASE_URL}`);
+    const socket = io(API_BASE_URL, {
       auth: { token },
       transports: ['websocket', 'polling']
     });
@@ -108,7 +109,7 @@ export function TradeDetailPage() {
         if (data.conversationId === convId) {
             const formattedMessages = data.messages.map(m => ({
                 id: m.id?.toString() || Math.random().toString(),
-                sender: (m.sender_address || m.senderAddress || '').toLowerCase() === user.address.toLowerCase() ? 'me' : 'other',
+                sender: (m.sender_address || m.senderAddress || '') === user.address ? 'me' : 'other',
                 content: m.message_text || m.messageText,
                 timestamp: new Date(m.created_at || m.createdAt || Date.now()).getTime()
             }));
@@ -123,7 +124,7 @@ export function TradeDetailPage() {
                 // If the message ID already exists (real message), ignore
                 if (prev.some(m => m.id === msg.id)) return prev;
 
-                const isMe = (msg.senderAddress || msg.sender_address || '').toLowerCase() === user.address.toLowerCase();
+                const isMe = (msg.senderAddress || msg.sender_address || '') === user.address;
                 const newMsg = {
                     id: msg.id?.toString(),
                     sender: isMe ? 'me' : 'other',
@@ -167,9 +168,9 @@ export function TradeDetailPage() {
         timestamp: Date.now()
     }]);
 
-    const userAddress = user.address.toLowerCase();
-    const buyerAddress = trade.buyerAddress.toLowerCase();
-    const sellerAddress = trade.sellerAddress.toLowerCase();
+    const userAddress = user.address;
+    const buyerAddress = trade.buyerAddress;
+    const sellerAddress = trade.sellerAddress;
     
     const otherAddress = userAddress === buyerAddress ? sellerAddress : buyerAddress;
 
@@ -194,7 +195,7 @@ export function TradeDetailPage() {
   const fetchTrade = async () => {
     if (!id) return;
     try {
-      const response = await fetch(`http://localhost:5001/api/trades/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/trades/${id}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('shadowpay_token')}`
         }
@@ -213,7 +214,7 @@ export function TradeDetailPage() {
   const handleAccept = async () => {
     setIsActionLoading(true);
     try {
-      const response = await fetch(`http://localhost:5001/api/trades/${id}/accept`, {
+      const response = await fetch(`${API_BASE_URL}/api/trades/${id}/accept`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('shadowpay_token')}`
@@ -250,6 +251,7 @@ export function TradeDetailPage() {
     } catch (error: any) {
       console.error('Accept flow error:', error);
       toast.error(error.message || 'Transaction failed');
+      fetchTrade();
     } finally {
       setIsActionLoading(false);
     }
@@ -257,7 +259,7 @@ export function TradeDetailPage() {
 
   const handleDepositSignature = async (sig: string) => {
     try {
-      const response = await fetch(`http://localhost:5001/api/trades/${id}/deposit-signature`, {
+      const response = await fetch(`${API_BASE_URL}/api/trades/${id}/deposit-signature`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -297,7 +299,7 @@ export function TradeDetailPage() {
         }
       };
 
-      const response = await fetch(`http://localhost:5001/api/trades/${id}/settle`, {
+      const response = await fetch(`${API_BASE_URL}/api/trades/${id}/settle`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -326,7 +328,7 @@ export function TradeDetailPage() {
      setShowRejectConfirm(false);
      
      try {
-       const response = await fetch(`http://localhost:5001/api/trades/${id}/reject`, {
+       const response = await fetch(`${API_BASE_URL}/api/trades/${id}/reject`, {
          method: 'POST',
          headers: {
            'Authorization': `Bearer ${localStorage.getItem('shadowpay_token')}`
@@ -360,8 +362,8 @@ export function TradeDetailPage() {
     );
   }
 
-  const isBuyer = trade.buyerAddress.toLowerCase() === user?.address.toLowerCase();
-  const isSeller = trade.sellerAddress.toLowerCase() === user?.address.toLowerCase();
+  const isBuyer = trade.buyerAddress === user?.address;
+  const isSeller = trade.sellerAddress === user?.address;
 
   return (
     <div className="container mx-auto px-4 py-24 min-h-screen">
@@ -378,7 +380,7 @@ export function TradeDetailPage() {
           <Card className="bg-[#0f172a]/40 border-white/10 backdrop-blur-sm shadow-xl">
             <CardHeader>
               <div className="flex justify-between items-start">
-                <Badge variant="outline" className="px-3 py-1 bg-primary/10 text-primary border-primary/20">
+                <Badge variant="outline" className="px-3 py-1 bg-white/10 text-white border-primary/20">
                   {trade.status.replace('_', ' ')}
                 </Badge>
                 <div className="text-right">
@@ -387,7 +389,7 @@ export function TradeDetailPage() {
                 </div>
               </div>
               <CardTitle className="text-2xl font-bold text-white mb-2 flex items-center gap-3">
-                <Package className="w-6 h-6 text-primary" />
+                <Package className="w-6 h-6 text-white" />
                 {trade.itemName}
               </CardTitle>
               <CardDescription className="text-base text-muted-foreground leading-relaxed">
@@ -399,12 +401,12 @@ export function TradeDetailPage() {
                 <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
                   <p className="text-xs text-muted-foreground uppercase tracking-widest mb-2 font-semibold">Seller</p>
                   <p className="text-sm font-mono text-white break-all">{trade.sellerAddress}</p>
-                  {isSeller && <Badge className="mt-2 bg-primary/20 text-primary border-none">You</Badge>}
+                  {isSeller && <Badge className="mt-2 bg-white/20 text-white border-none">You</Badge>}
                 </div>
                 <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
                   <p className="text-xs text-muted-foreground uppercase tracking-widest mb-2 font-semibold">Buyer</p>
                   <p className="text-sm font-mono text-white break-all">{trade.buyerAddress}</p>
-                  {isBuyer && <Badge className="mt-2 bg-primary/20 text-primary border-none">You</Badge>}
+                  {isBuyer && <Badge className="mt-2 bg-white/20 text-white border-none">You</Badge>}
                 </div>
               </div>
 
@@ -456,7 +458,7 @@ export function TradeDetailPage() {
                 </div>
               </div>
 
-              {trade.status === 'PENDING' && isBuyer && (
+              {['PENDING', 'ACCEPTED'].includes(trade.status) && isBuyer && (
                 <div className="pt-4 flex flex-col gap-3">
                   <Button 
                     onClick={handleAccept} 
@@ -565,7 +567,7 @@ export function TradeDetailPage() {
                 )}
             </div>
             <div className="p-3 border-t border-white/5 bg-black/20">
-              {['REJECTED', 'SUCCESS', 'RELEASED', 'CANCELLED', 'ACCEPTED', 'DEPOSIT_PENDING', 'DEPOSIT_CONFIRMED'].includes(trade.status) ? (
+              {['REJECTED', 'DEPOSIT_CONFIRMED', 'SETTLE_PENDING'].includes(trade.status) ? (
                 <div className="text-center text-red-400 text-sm font-medium p-2 bg-red-500/10 rounded">
                     Chat has ended.
                 </div>

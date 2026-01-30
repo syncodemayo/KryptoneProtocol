@@ -46,15 +46,15 @@ export function Navbar() {
       <div className="container mx-auto px-4 md:px-6">
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-3 group">
-            <div className="relative flex items-center justify-center w-10 h-10 rounded-xl overflow-hidden">
+          <Link to="/" className="flex items-center gap-2 md:gap-3 group">
+            <div className="relative flex items-center justify-center w-8 h-8 md:w-10 md:h-10 rounded-xl overflow-hidden shrink-0">
               <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
             </div>
-            <div className="flex flex-col">
-              <span className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-white to-white/70">
+            <div className="flex flex-col min-w-0">
+              <span className="text-lg md:text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-white to-white/70 truncate">
                 Kryptone Protocol
               </span>
-              <span className="text-[10px] font-medium tracking-widest text-white/80 uppercase">Trustless Protocol</span>
+              <span className="text-[9px] md:text-[10px] font-medium tracking-widest text-white/80 uppercase truncate">Trustless Protocol</span>
             </div>
           </Link>
 
@@ -120,38 +120,59 @@ export function Navbar() {
 
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
-        <div className="md:hidden absolute top-full left-0 right-0 bg-[#020817]/95 backdrop-blur-2xl border-b border-white/10 p-4 flex flex-col gap-2 shadow-2xl animate-in slide-in-from-top-5 duration-300">
-            {navLinks.map((link) => (
-              <a
-                key={link.name}
-                href={link.href}
-                className="flex items-center justify-between p-4 rounded-xl hover:bg-white/5 transition-colors text-base font-medium text-white/90"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                <span className="flex items-center gap-3">
-                    <span className="w-1 h-1 rounded-full bg-primary/50" />
-                    {link.name}
-                </span>
-                <ChevronRight className="w-4 h-4 text-white/30" />
-              </a>
-            ))}
-            <div className="pt-4 mt-2 border-t border-white/10 flex flex-col items-center gap-4 w-full">
-                 {isAuthenticated && user && (
-                     <Badge 
-                       variant="outline" 
-                       className={cn(
-                         "px-3 py-1 uppercase tracking-wider text-[10px] font-bold border",
-                         user.type === 'seller' 
-                           ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" 
-                           : "bg-cyan-500/10 text-cyan-400 border-cyan-500/20"
-                       )}
-                     >
-                         {user.type}
-                     </Badge>
-                 )}
-                 <ConnectButton className="!w-full !justify-center !bg-primary !h-12 !rounded-xl" />
-            </div>
-        </div>
+        <>
+          <div 
+            className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity duration-300"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+          <div className="md:hidden absolute top-full left-0 right-0 z-50 bg-[#020817]/95 backdrop-blur-2xl border-b border-white/10 p-4 flex flex-col gap-2 shadow-2xl animate-in slide-in-from-top-5 duration-300">
+              {navLinks.map((link) => (
+                link.href.startsWith('#') ? (
+                  <a
+                    key={link.name}
+                    href={link.href}
+                    className="flex items-center justify-between p-4 rounded-xl hover:bg-white/5 transition-colors text-base font-medium text-white/90"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <span className="flex items-center gap-3">
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary/50" />
+                        {link.name}
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-white/30" />
+                  </a>
+                ) : (
+                  <Link
+                    key={link.name}
+                    to={link.href}
+                    className="flex items-center justify-between p-4 rounded-xl hover:bg-white/5 transition-colors text-base font-medium text-white/90"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <span className="flex items-center gap-3">
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary/50" />
+                        {link.name}
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-white/30" />
+                  </Link>
+                )
+              ))}
+              <div className="pt-6 mt-2 border-t border-white/10 flex flex-col items-center gap-4 w-full">
+                   {isAuthenticated && user && (
+                       <Badge 
+                         variant="outline" 
+                         className={cn(
+                           "px-4 py-1.5 uppercase tracking-wider text-[10px] font-bold border",
+                           user.type === 'seller' 
+                             ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_15px_-5px_var(--emerald-500)]" 
+                             : "bg-cyan-500/10 text-cyan-400 border-cyan-500/20 shadow-[0_0_15px_-5px_var(--cyan-500)]"
+                         )}
+                       >
+                           {user.type} Profile
+                       </Badge>
+                   )}
+                   <ConnectButton className="!w-full !justify-center !bg-primary !h-14 !rounded-xl !text-base !font-bold shadow-lg shadow-primary/20" />
+              </div>
+          </div>
+        </>
       )}
     </nav>
   );

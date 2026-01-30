@@ -45,7 +45,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useWallet as useCustomWallet } from '@/hooks/use-wallet';
+import { useAuth } from '@/context/auth-context';
 import { type WalletInfo, authService } from '@/lib/auth-service';
 
 interface TokenBalance {
@@ -644,8 +644,8 @@ export function WalletsModal({
   const { publicKey } = useWallet();
   const {
     isAuthenticated,
-    disconnect,
-  } = useCustomWallet();
+    logout,
+  } = useAuth();
   const [tokenBalances, setTokenBalances] = useState<SolanaTokenBalances | null>(
     null
   );
@@ -731,10 +731,8 @@ export function WalletsModal({
 
   const handleDisconnect = () => {
     try {
-      localStorage.clear();
-      disconnect();
+      logout();
       onClose();
-      toast.success('Wallet disconnected');
     } catch {
       toast.error('Failed to disconnect wallet');
     }

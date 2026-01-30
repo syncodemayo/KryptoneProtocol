@@ -269,7 +269,7 @@ app.use(async (req, res, next) => {
 // Get user info
 app.get('/api/user/info', async (req, res) => {
   try {
-    const solanaAddress = req.solanaAddress.toLowerCase();
+    const solanaAddress = req.solanaAddress;
     const wallet = db.getWallet(solanaAddress);
     
     // Build ShadowPay data object
@@ -282,7 +282,6 @@ app.get('/api/user/info', async (req, res) => {
       shadowPay.commitment = wallet?.commitment || null;
       shadowPay.root = wallet?.root || null;
       shadowPay.api_key = wallet?.apiKey || null;
-      // Note: treasury_wallet, public_key, secret_key are no longer populated
     }
     
     res.json({
@@ -301,7 +300,7 @@ app.get('/api/user/info', async (req, res) => {
 app.post('/api/user/register-shadowpay', async (req, res) => {
   try {
     const { userType, signature, message } = req.body;
-    const solanaAddress = req.solanaAddress.toLowerCase();
+    const solanaAddress = req.solanaAddress;
 
     // Validate required parameters
     if (!userType || !signature || !message) {
@@ -439,13 +438,13 @@ app.post('/api/user/register-shadowpay', async (req, res) => {
 // Get user's conversations
 app.get('/api/conversations', async (req, res) => {
   try {
-    const solanaAddress = req.solanaAddress.toLowerCase();
+    const solanaAddress = req.solanaAddress;
     console.log(`[API] Fetching conversations for ${solanaAddress}`);
     const conversations = db.getUserConversations(solanaAddress);
     console.log(`[API] Found ${conversations.length} conversations`);
     
     const enrichedConversations = conversations.map(conv => {
-      const otherAddress = conv.buyer_address.toLowerCase() === solanaAddress ? conv.seller_address : conv.buyer_address;
+      const otherAddress = conv.buyer_address === solanaAddress ? conv.seller_address : conv.buyer_address;
       let otherName = 'Anonymous';
       
       try {
@@ -483,7 +482,7 @@ app.get('/api/conversations', async (req, res) => {
 app.post('/api/conversations', async (req, res) => {
   try {
     const { sellerAddress } = req.body;
-    const buyerAddress = req.solanaAddress.toLowerCase();
+    const buyerAddress = req.solanaAddress;
 
     if (!sellerAddress) {
       return res.status(400).json({ error: 'sellerAddress is required.' });
@@ -582,7 +581,7 @@ app.get('/api/conversations/:conversationId/messages', async (req, res) => {
 // Get all trades for the authenticated user
 app.get('/api/trades', async (req, res) => {
   try {
-    const trades = db.getTradesForUser(req.solanaAddress.toLowerCase());
+    const trades = db.getTradesForUser(req.solanaAddress);
     
     const formattedTrades = trades.map(t => ({
       tradeId: t.trade_id,
@@ -610,7 +609,7 @@ app.get('/api/trades', async (req, res) => {
 app.post('/api/trades', async (req, res) => {
   try {
     const { itemName, description, priceInSol, buyerWallet, sellerAddress, conversationId } = req.body;
-    const initiatorAddress = req.solanaAddress.toLowerCase();
+    const initiatorAddress = req.solanaAddress;
 
     if (!itemName || !priceInSol || (!buyerWallet && !sellerAddress)) {
       return res.status(400).json({
@@ -697,14 +696,14 @@ app.post('/api/trades', async (req, res) => {
 app.post('/api/trades/:tradeId/accept', async (req, res) => {
   try {
     const { tradeId } = req.params;
-    const buyerAddress = req.solanaAddress.toLowerCase();
+    const buyerAddress = req.solanaAddress;
 
     const trade = db.getTrade(tradeId);
     if (!trade) {
       return res.status(404).json({ error: 'Trade not found.' });
     }
 
-    if (trade.buyer_address?.toLowerCase() !== buyerAddress.toLowerCase()) {
+    if (trade.buyer_address !== buyerAddress) {
       return res.status(403).json({ error: 'Only the buyer can accept this trade.' });
     }
 
@@ -772,7 +771,7 @@ app.post('/api/trades/:tradeId/deposit-signature', async (req, res) => {
   try {
     const { tradeId } = req.params;
     const { txSignature } = req.body;
-    const buyerAddress = req.solanaAddress.toLowerCase();
+    const buyerAddress = req.solanaAddress;
 
     if (!txSignature) {
       return res.status(400).json({ error: 'txSignature is required.' });
@@ -783,7 +782,7 @@ app.post('/api/trades/:tradeId/deposit-signature', async (req, res) => {
       return res.status(404).json({ error: 'Trade not found.' });
     }
 
-    if (trade.buyer_address?.toLowerCase() !== buyerAddress.toLowerCase()) {
+    if (trade.buyer_address !== buyerAddress) {
       return res.status(403).json({ error: 'Only the buyer can submit a deposit signature.' });
     }
 
@@ -809,14 +808,14 @@ app.post('/api/trades/:tradeId/deposit-signature', async (req, res) => {
 app.post('/api/trades/:tradeId/reject', async (req, res) => {
   try {
     const { tradeId } = req.params;
-    const buyerAddress = req.solanaAddress.toLowerCase();
+    const buyerAddress = req.solanaAddress;
 
     const trade = db.getTrade(tradeId);
     if (!trade) {
       return res.status(404).json({ error: 'Trade not found.' });
     }
 
-    if (trade.buyer_address?.toLowerCase() !== buyerAddress.toLowerCase()) {
+    if (trade.buyer_address !== buyerAddress) {
       return res.status(403).json({ error: 'Only the buyer can reject this trade.' });
     }
 
@@ -841,15 +840,15 @@ app.post('/api/trades/:tradeId/reject', async (req, res) => {
 app.get('/api/trades/:tradeId', async (req, res) => {
   try {
     const { tradeId } = req.params;
-    const requester = req.solanaAddress.toLowerCase();
+    const requester = req.solanaAddress;
 
     const trade = db.getTrade(tradeId);
     if (!trade) {
       return res.status(404).json({ error: 'Trade not found.' });
     }
 
-    const isBuyer = trade.buyer_address?.toLowerCase() === requester.toLowerCase();
-    const isSeller = trade.seller_address?.toLowerCase() === requester.toLowerCase();
+    const isBuyer = trade.buyer_address === requester;
+    const isSeller = trade.seller_address === requester;
     if (!isBuyer && !isSeller) {
       return res.status(403).json({ error: 'Access denied to this trade.' });
     }
@@ -930,7 +929,7 @@ app.post('/api/trades/:tradeId/settle', async (req, res) => {
   try {
     const { tradeId } = req.params;
     const { paymentHeader, paymentRequirements, resource } = req.body;
-    const buyerAddress = req.solanaAddress.toLowerCase();
+    const buyerAddress = req.solanaAddress;
 
     if (!paymentHeader || !paymentRequirements || !resource) {
       return res.status(400).json({
@@ -943,7 +942,7 @@ app.post('/api/trades/:tradeId/settle', async (req, res) => {
       return res.status(404).json({ error: 'Trade not found.' });
     }
 
-    if (trade.buyer_address?.toLowerCase() !== buyerAddress.toLowerCase()) {
+    if (trade.buyer_address !== buyerAddress) {
       return res.status(403).json({ error: 'Only the buyer can settle this trade.' });
     }
 
@@ -1002,7 +1001,7 @@ app.post('/api/trades/:tradeId/settle', async (req, res) => {
 app.post('/api/user/encryption-key', async (req, res) => {
   try {
     const { publicKey, privateKey } = req.body;
-    const solanaAddress = req.solanaAddress.toLowerCase();
+    const solanaAddress = req.solanaAddress;
 
     if (!publicKey || !privateKey) {
       return res.status(400).json({ 
@@ -1025,7 +1024,7 @@ app.post('/api/user/encryption-key', async (req, res) => {
 // Get own public key
 app.get('/api/user/encryption-key', async (req, res) => {
   try {
-    const publicKey = db.getPublicKey(req.solanaAddress.toLowerCase());
+    const publicKey = db.getPublicKey(req.solanaAddress);
 
     res.json({
       success: true,
@@ -1040,7 +1039,7 @@ app.get('/api/user/encryption-key', async (req, res) => {
 // Get own decrypted private key (for client-side decryption)
 app.get('/api/user/encryption-key/private', async (req, res) => {
   try {
-    const privateKey = db.getDecryptedPrivateKey(req.solanaAddress.toLowerCase());
+    const privateKey = db.getDecryptedPrivateKey(req.solanaAddress);
 
     if (!privateKey) {
       return res.status(404).json({ error: 'Encryption keys not found. Please generate keys first.' });
@@ -1077,12 +1076,12 @@ app.get('/api/user/encryption-key/:address', async (req, res) => {
 
 // Middleware to check if user is admin
 const adminAuthMiddleware = (req, res, next) => {
-  const solanaAddress = req.solanaAddress.toLowerCase();
+  const solanaAddress = req.solanaAddress;
   
   // Get list of admin addresses from environment variable
   // Format: comma-separated list of Solana addresses
   const adminAddresses = process.env.ADMIN_ADDRESSES 
-    ? process.env.ADMIN_ADDRESSES.split(',').map(addr => addr.trim().toLowerCase())
+    ? process.env.ADMIN_ADDRESSES.split(',').map(addr => addr.trim())
     : [];
   
   if (adminAddresses.length === 0) {
@@ -1091,7 +1090,7 @@ const adminAuthMiddleware = (req, res, next) => {
     });
   }
   
-  if (!solanaAddress || !adminAddresses.includes(solanaAddress.toLowerCase())) {
+  if (!solanaAddress || !adminAddresses.includes(solanaAddress)) {
     return res.status(403).json({ 
       error: 'Access denied. Admin privileges required.' 
     });
@@ -1107,7 +1106,7 @@ app.post('/api/admin/conversations/:conversationId/decrypt', adminAuthMiddleware
   try {
     const { conversationId } = req.params;
     const { reason, disputeId } = req.body;
-    const adminAddress = req.solanaAddress.toLowerCase();
+    const adminAddress = req.solanaAddress;
 
     // Get conversation
     const conversation = db.getConversation(conversationId);
@@ -1149,7 +1148,7 @@ app.post('/api/admin/conversations/:conversationId/decrypt', adminAuthMiddleware
 
           // Determine which private key to use based on sender
           let recipientPrivateKey;
-          if (msg.sender_address.toLowerCase() === conversation.buyer_address.toLowerCase()) {
+          if (msg.sender_address === conversation.buyer_address) {
             // Message from buyer, use seller's private key to decrypt
             recipientPrivateKey = sellerPrivateKey;
           } else {
