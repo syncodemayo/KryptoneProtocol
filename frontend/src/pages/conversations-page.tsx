@@ -5,6 +5,7 @@ import { MessageSquare, Clock, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { toast } from 'sonner';
 import { io } from 'socket.io-client';
+import { API_BASE_URL } from '@/lib/config';
 
 interface Conversation {
   conversationId: string;
@@ -26,7 +27,7 @@ export function ConversationsPage() {
     const token = localStorage.getItem('shadowpay_token');
     if (!token) return;
 
-    const socket = io('http://localhost:5001', {
+    const socket = io(API_BASE_URL, {
       auth: { token },
       transports: ['websocket', 'polling']
     });
@@ -46,7 +47,7 @@ export function ConversationsPage() {
 
   const fetchConversations = async () => {
     try {
-      const response = await fetch('http://localhost:5001/api/conversations', {
+      const response = await fetch(`${API_BASE_URL}/api/conversations`, {
         headers: {
             'Authorization': `Bearer ${localStorage.getItem('shadowpay_token')}`
         }
@@ -80,7 +81,11 @@ export function ConversationsPage() {
                 <CardContent className="flex flex-col items-center justify-center py-12">
                     <MessageSquare className="w-12 h-12 text-muted-foreground mb-4" />
                     <p className="text-white text-lg font-medium">No conversations yet</p>
-                    <p className="text-muted-foreground text-sm">Start a trade to begin chatting.</p>
+                    <p className="text-muted-foreground text-sm">
+                        {user?.type === 'buyer' 
+                            ? 'Start a trade to begin chatting.' 
+                            : 'Conversations will appear here when buyers contact you.'}
+                    </p>
                 </CardContent>
             </Card>
         ) : (

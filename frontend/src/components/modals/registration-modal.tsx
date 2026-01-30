@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useAuth, type UserType } from '@/context/auth-context';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Dialog,
@@ -26,7 +25,6 @@ export function RegistrationModal() {
   const { isAuthenticated, user, register, login, isLoading, isRegistered } = useAuth();
   const { connected } = useWallet();
   const [isOpen, setIsOpen] = useState(false);
-  const [name, setName] = useState('');
   const [userType, setUserType] = useState<UserType>('buyer');
 
   // Open modal if wallet is connected but user is not authenticated
@@ -39,8 +37,7 @@ export function RegistrationModal() {
   }, [connected, isAuthenticated, user]);
 
   const handleRegister = async () => {
-    if (!name.trim()) return;
-    await register(name, userType);
+    await register(userType);
   };
 
   const handleLogin = async () => {
@@ -68,16 +65,6 @@ export function RegistrationModal() {
            </div>
         ) : !isRegistered ? (
           <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="name" className="text-white">Display Name</Label>
-              <Input
-                id="name"
-                placeholder="Enter your username"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="bg-white/5 border-white/10 text-white focus:border-primary"
-              />
-            </div>
             <div className="grid gap-2">
               <Label htmlFor="type" className="text-white">Account Type</Label>
               <Select value={userType} onValueChange={(val: UserType) => setUserType(val)}>
@@ -115,7 +102,7 @@ export function RegistrationModal() {
               )}
             </Button>
           ) : (
-            <Button onClick={handleRegister} disabled={isLoading || !name.trim()} className="w-full bg-primary hover:bg-primary/90">
+            <Button onClick={handleRegister} disabled={isLoading} className="w-full bg-primary hover:bg-primary/90">
               {isLoading ? (
                   <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
