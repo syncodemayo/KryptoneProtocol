@@ -17,13 +17,4 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
-  // Enable SPA fallback for client-side routing
-  server: {
-    // Dev server: redirect all requests to index.html
-    historyApiFallback: true,
-  },
-  preview: {
-    // Preview server: redirect all requests to index.html
-    historyApiFallback: true,
-  },
 })
