@@ -46,6 +46,10 @@ class AuthService {
     this.safeWalletAddress = localStorage.getItem('safe_wallet_address');
   }
 
+  setToken(token: string | null) {
+    this.token = token;
+  }
+
   // Generate message for signing
   generateAuthMessage(address: string): string {
     const timestamp = Date.now();
@@ -350,6 +354,8 @@ class AuthService {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('polygon_address');
     localStorage.removeItem('safe_wallet_address');
+    localStorage.removeItem('shadowpay_token');
+    localStorage.removeItem('shadowpay_user');
   }
 }
 

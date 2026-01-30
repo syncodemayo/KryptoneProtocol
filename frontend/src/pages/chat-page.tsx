@@ -4,7 +4,7 @@ import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Send, MessageSquare, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Send, MessageSquare, ShieldCheck, Loader2 } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import { API_BASE_URL } from '@/lib/config';
 import {
@@ -41,6 +41,7 @@ export function ChatPage() {
   const [isCreating, setIsCreating] = useState(false);
 
   const handleCreateTrade = async () => {
+    if (isCreating) return;
     if (!tradeData.name || !tradeData.price) {
         toast.error('Item name and price are required');
         return;
@@ -90,7 +91,7 @@ export function ChatPage() {
     if (!id || !user?.address) return;
 
     // Determine conversation ID safely
-    const addresses = [user.address.toLowerCase(), id.toLowerCase()].sort();
+    const addresses = [user.address, id].sort();
     const convId = `${addresses[0]}_${addresses[1]}`;
     setConversationId(convId);
 
@@ -115,7 +116,7 @@ export function ChatPage() {
         if (data.conversationId === convId) {
             const formattedMessages = data.messages.map(m => ({
                 id: m.id?.toString() || Math.random().toString(),
-                sender: (m.sender_address || m.senderAddress || '').toLowerCase() === user.address.toLowerCase() ? 'me' : 'other',
+                sender: (m.sender_address || m.senderAddress || '') === user.address ? 'me' : 'other',
                 content: m.message_text || m.messageText,
                 timestamp: new Date(m.created_at || m.createdAt || Date.now()).getTime()
             }));
@@ -130,7 +131,7 @@ export function ChatPage() {
                 if (prev.some(m => m.id === msg.id)) return prev;
                 return [...prev, {
                     id: msg.id?.toString(),
-                    sender: (msg.senderAddress || msg.sender_address || '').toLowerCase() === user.address.toLowerCase() ? 'me' : 'other',
+                    sender: (msg.senderAddress || msg.sender_address || '') === user.address ? 'me' : 'other',
                     content: msg.messageText || msg.message_text,
                     timestamp: new Date(msg.createdAt || msg.created_at || Date.now()).getTime()
                 }];
@@ -195,13 +196,15 @@ export function ChatPage() {
                 <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
             </div>
             
-            <Button 
-                onClick={() => setShowCreateTrade(true)} 
-                className="w-full mt-4 bg-white text-black hover:bg-white/90"
-            >
-                <ShieldCheck className="w-4 h-4 mr-2" />
-                Start Trade
-            </Button>
+            {user?.type === 'buyer' && (
+                <Button 
+                    onClick={() => setShowCreateTrade(true)} 
+                    className="w-full mt-4 bg-white text-black hover:bg-white/90"
+                >
+                    <ShieldCheck className="w-4 h-4 mr-2" />
+                    Start Trade
+                </Button>
+            )}
         </CardHeader>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-4" ref={scrollRef}>
@@ -290,7 +293,14 @@ export function ChatPage() {
               Cancel
             </Button>
             <Button onClick={handleCreateTrade} disabled={isCreating} className="bg-primary hover:bg-primary/90 text-white">
-              {isCreating ? 'Creating...' : 'Start Trade'}
+              {isCreating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
+              ) : (
+                  'Start Trade'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,8 +1,10 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { toast } from 'sonner';
 import bs58 from 'bs58';
 import { API_BASE_URL } from '@/lib/config';
+import { authService } from '@/lib/auth-service';
 
 // Mock User Type
 export type UserType = 'buyer' | 'seller';
@@ -20,16 +22,19 @@ interface AuthContextType {
   register: (name: string, type: UserType) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
+  isInitializing: boolean;
   isRegistered: boolean | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { publicKey, signMessage, disconnect } = useWallet();
+  const navigate = useNavigate();
+  const { publicKey, signMessage, disconnect, connecting } = useWallet();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
   const [isRegistered, setIsRegistered] = useState<boolean | null>(null);
 
   // Load session from local storage on mount
@@ -37,9 +42,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const storedUser = localStorage.getItem('shadowpay_user');
     const token = localStorage.getItem('shadowpay_token');
     
+    // Clear stale session if token is literally "null" or "undefined"
+    if (token === 'null' || token === 'undefined') {
+      localStorage.removeItem('shadowpay_token');
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('shadowpay_user');
+      setIsInitializing(false);
+      return;
+    }
+
     if (storedUser && token) {
-      setUser(JSON.parse(storedUser));
-      setIsAuthenticated(true);
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+        setIsAuthenticated(true);
+        authService.setToken(token);
+      } catch (e) {
+        console.error('Failed to parse stored user', e);
+        localStorage.removeItem('shadowpay_user');
+      }
+      setIsInitializing(false);
     } else if (token) {
         // Attempt to re-hydrate user from token if missing in local storage
         fetch(`${API_BASE_URL}/api/user/info`, {
@@ -51,29 +73,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         })
         .then(userData => {
             if (userData && userData.shadowPay) {
-                // We need the address from the wallet adapter generally, but if wallet is not connected yet,
-                // we might need to rely on what the backend thinks or wait for wallet.
-                // However, without publicKey, we can't fully restore 'User' object as defined.
-                // But wait, the token implies we verified the address.
-                // We can't easily get the address from the backend /api/user/info IF it doesn't return it?
-                // api/user/info returns { success: true, shadowPay: { ... } }
-                // Let's assume shadowPay has the address or we can infer it?
-                // We should probably rely on wallet adapter reconnection too?
+                // Re-hydrate user object from backend info
+                const rehydratedUser: User = {
+                    address: userData.solanaAddress,
+                    name: userData.shadowPay.userType || 'User',
+                    type: (userData.shadowPay.userType?.toLowerCase() === 'seller' ? 'seller' : 'buyer') as UserType,
+                };
+                setUser(rehydratedUser);
+                setIsAuthenticated(true);
+                authService.setToken(token);
+                localStorage.setItem('shadowpay_user', JSON.stringify(rehydratedUser));
             }
         })
         .catch(() => {
-            // failed, clear token
             localStorage.removeItem('shadowpay_token');
+        })
+        .finally(() => {
+            setIsInitializing(false);
         });
+    } else {
+        setIsInitializing(false);
     }
   }, []);
 
-  // Handle wallet disconnection - REMOVED to prevent logout on page refresh
-  // useEffect(() => {
-  //   if (!publicKey && isAuthenticated) {
-  //     logout();
-  //   }
-  // }, [publicKey]);
+  // Handle wallet disconnection
+  useEffect(() => {
+    // Only logout if we ARE NOT connecting, and have NO publicKey, but think we ARE authenticated.
+    // This happens when a user explicitly disconnects or the session is stale.
+    // Adding a small delay to allow wallet adapter to stabilize on refresh
+    if (!connecting && !publicKey && isAuthenticated) {
+      const timeout = setTimeout(() => {
+        if (!publicKey && !connecting) {
+          console.log('[AuthContext] Wallet disconnected, logging out');
+          logout();
+        }
+      }, 500);
+      return () => clearTimeout(timeout);
+    }
+  }, [publicKey, isAuthenticated, connecting]);
 
   // Check registration status when wallet connects
   useEffect(() => {
@@ -129,12 +166,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }),
       });
 
+      const data = await loginResponse.json();
       if (!loginResponse.ok) {
-        const errorData = await loginResponse.json();
-        throw new Error(errorData.error || 'Authentication failed');
+        throw new Error(data.error || 'Authentication failed');
       }
 
-      const { token } = await loginResponse.json();
+      const { token } = data;
 
       // 4. Fetch user info with the new token
       const userResponse = await fetch(`${API_BASE_URL}/api/user/info`, {
@@ -151,6 +188,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // 5. Store session
       localStorage.setItem('shadowpay_token', token);
+      localStorage.setItem('auth_token', token);
+      authService.setToken(token);
       localStorage.setItem('shadowpay_user', JSON.stringify(loggedInUser));
       setUser(loggedInUser);
       setIsAuthenticated(true);
@@ -158,9 +197,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Redirect based on role
       if (loggedInUser.type === 'seller') {
-        window.location.href = '/trades';
+        navigate('/trades');
       } else {
-        window.location.href = '/market';
+        navigate('/market');
       }
 
     } catch (error: any) {
@@ -196,8 +235,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }),
       });
       
-      const { token } = await loginResponse.json();
+      const loginData = await loginResponse.json();
+      if (!loginResponse.ok) {
+        throw new Error(loginData.error || 'Authentication failed');
+      }
+      const { token } = loginData;
       localStorage.setItem('shadowpay_token', token);
+      localStorage.setItem('auth_token', token);
+      authService.setToken(token);
 
       // 2. Register with ShadowPay
       const regResponse = await fetch(`${API_BASE_URL}/api/user/register-shadowpay`, {
@@ -214,6 +259,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       const data = await regResponse.json();
+      if (!regResponse.ok) {
+          throw new Error(data.error || 'Failed to register with ShadowPay');
+      }
 
       const newUser: User = {
         address: publicKey.toBase58(),
@@ -233,9 +281,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Redirect based on role
       if (newUser.type === 'seller') {
-          window.location.href = '/trades';
+          navigate('/trades');
       } else {
-          window.location.href = '/market';
+          navigate('/market');
       }
 
     } catch (error: any) {
@@ -249,14 +297,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     setUser(null);
     setIsAuthenticated(false);
-    localStorage.removeItem('shadowpay_user');
-    localStorage.removeItem('shadowpay_token');
+    authService.logout();
+    authService.setToken(null);
     disconnect();
     toast.success('Logged out');
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, register, logout, isLoading, isRegistered }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, login, register, logout, isLoading, isInitializing, isRegistered }}>
       {children}
     </AuthContext.Provider>
   );
