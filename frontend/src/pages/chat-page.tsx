@@ -90,8 +90,8 @@ export function ChatPage() {
   useEffect(() => {
     if (!id || !user?.address) return;
 
-    // Determine conversation ID safely
-    const addresses = [user.address, id].sort();
+    // Determine conversation ID safely (case-insensitive for room stability)
+    const addresses = [user.address.toLowerCase(), id.toLowerCase()].sort();
     const convId = `${addresses[0]}_${addresses[1]}`;
     setConversationId(convId);
 
@@ -126,7 +126,7 @@ export function ChatPage() {
 
     socket.on('message_received', (data: { message: any }) => {
         const msg = data.message;
-        if (msg.conversationId === convId) {
+        if (msg.conversationId.toLowerCase() === (convId || '').toLowerCase()) {
             setMessages(prev => {
                 if (prev.some(m => m.id === msg.id)) return prev;
                 return [...prev, {
