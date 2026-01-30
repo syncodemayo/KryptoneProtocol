@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { MessageSquare, Clock, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { toast } from 'sonner';
-import { io, Socket } from 'socket.io-client';
+import { io } from 'socket.io-client';
 import { API_BASE_URL } from '@/lib/config';
 
 interface Conversation {
@@ -81,7 +81,11 @@ export function ConversationsPage() {
                 <CardContent className="flex flex-col items-center justify-center py-12">
                     <MessageSquare className="w-12 h-12 text-muted-foreground mb-4" />
                     <p className="text-white text-lg font-medium">No conversations yet</p>
-                    <p className="text-muted-foreground text-sm">Start a trade to begin chatting.</p>
+                    <p className="text-muted-foreground text-sm">
+                        {user?.type === 'buyer' 
+                            ? 'Start a trade to begin chatting.' 
+                            : 'Conversations will appear here when buyers contact you.'}
+                    </p>
                 </CardContent>
             </Card>
         ) : (
