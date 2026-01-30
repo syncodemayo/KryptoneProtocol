@@ -650,10 +650,16 @@ app.post('/api/trades', async (req, res) => {
       return res.status(400).json({ error: 'Buyer wallet is not registered.' });
     }
 
+    // Generate trade ID first
+    const tradeIdUuid = randomUUID();
+    const tradeId = `trade_${tradeIdUuid}`;
+
     // Ensure conversation exists for this trade
     let finalConversationId = conversationId;
     try {
-      const conv = await messageManager.createOrGetConversation(finalBuyerAddress, finalSellerAddress);
+      // Use the newly generated tradeId if no conversationId was provided
+      // Use the UUID part (after "trade_") to avoid nested "trade_trade_" IDs
+      const conv = await messageManager.createOrGetConversation(finalBuyerAddress, finalSellerAddress, tradeIdUuid);
       finalConversationId = conv.conversation_id;
     } catch (error) {
       console.error('Error ensuring conversation for trade:', error);
@@ -661,7 +667,7 @@ app.post('/api/trades', async (req, res) => {
     }
 
     const trade = db.createTrade({
-      tradeId: `trade_${randomUUID()}`,
+      tradeId: tradeId,
       conversationId: finalConversationId || null,
       sellerAddress: finalSellerAddress,
       buyerAddress: finalBuyerAddress,

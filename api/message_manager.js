@@ -73,20 +73,34 @@ class MessageManager {
   /**
    * Send a message
    */
-  async sendMessage(senderAddress, recipientAddress, messageText, isEncrypted = false, encryptedMessage = null, encryptionMetadata = null, tradeId = null) {
+  async sendMessage(senderAddress, recipientAddress, messageText, isEncrypted = false, encryptedMessage = null, encryptionMetadata = null, data = {}) {
     try {
       const s = senderAddress;
       const r = recipientAddress;
+      const tradeId = data.tradeId || null;
       
       // Determine buyer and seller
       const isSenderSeller = this.db.isSeller(s);
       const buyerAddress = isSenderSeller ? r : s;
       const sellerAddress = isSenderSeller ? s : r;
 
-      console.log(`[MessageManager] Sending message from ${s} to ${r} (Buyer: ${buyerAddress}, Seller: ${sellerAddress})`);
+      console.log(`[MessageManager] Sending message from ${s} to ${r} (Buyer: ${buyerAddress}, Seller: ${sellerAddress}, TradeId: ${tradeId || 'none'})`);
 
-      // Create or get conversation
-      const conversation = await this.createOrGetConversation(buyerAddress, sellerAddress, tradeId);
+      // If we have a conversationId, use it. Otherwise create/get one.
+      let conversation;
+      if (data.conversationId) {
+        conversation = this.db.getConversation(data.conversationId);
+        if (!conversation) {
+            // If it doesn't exist but has a tradeId format, create it
+            if (data.conversationId.startsWith('trade_')) {
+                conversation = await this.createOrGetConversation(buyerAddress, sellerAddress, data.conversationId.replace('trade_', ''));
+            } else {
+                conversation = await this.createOrGetConversation(buyerAddress, sellerAddress);
+            }
+        }
+      } else {
+        conversation = await this.createOrGetConversation(buyerAddress, sellerAddress, tradeId);
+      }
 
       // Save message
       const message = this.db.saveMessage({
