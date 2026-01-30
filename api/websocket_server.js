@@ -102,8 +102,9 @@ class WebSocketServer {
               return;
           }
 
-          // Join the room
-          socket.join(conversationId);
+          // Join the room using the DB-provided normalization
+          const roomToJoin = conversation.conversation_id;
+          socket.join(roomToJoin);
           
           logger.info({
             message: 'User joined conversation',
@@ -170,10 +171,10 @@ class WebSocketServer {
             data
           );
 
-          console.log(`[WS] Message saved, emitting to room ${conversationId}`);
+          console.log(`[WS] Message saved, emitting to room ${message.conversationId}`);
 
           // Emit to all participants in the conversation room
-          this.io.to(conversationId).emit('message_received', {
+          this.io.to(message.conversationId).emit('message_received', {
             message: {
               id: message.id,
               conversationId: message.conversationId,

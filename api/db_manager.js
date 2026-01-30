@@ -453,7 +453,7 @@ class DatabaseManager {
 
   getConversation(conversationId) {
     try {
-      const stmt = this.db.prepare('SELECT * FROM conversations WHERE conversation_id = ?');
+      const stmt = this.db.prepare('SELECT * FROM conversations WHERE LOWER(conversation_id) = LOWER(?)');
       return stmt.get(conversationId) || null;
     } catch (error) {
       console.error('Error getting conversation:', error);
@@ -482,7 +482,7 @@ class DatabaseManager {
         UPDATE conversations SET 
           last_message_at = CURRENT_TIMESTAMP,
           last_message_text = ?
-        WHERE conversation_id = ?
+        WHERE LOWER(conversation_id) = LOWER(?)
       `);
       stmt.run(lastMessageText, conversationId);
       return true;
