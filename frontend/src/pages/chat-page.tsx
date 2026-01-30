@@ -90,8 +90,8 @@ export function ChatPage() {
   useEffect(() => {
     if (!id || !user?.address) return;
 
-    // Determine conversation ID safely
-    const addresses = [user.address, id].sort();
+    // Determine conversation ID safely (case-insensitive for room stability)
+    const addresses = [user.address.toLowerCase(), id.toLowerCase()].sort();
     const convId = `${addresses[0]}_${addresses[1]}`;
     setConversationId(convId);
 
@@ -113,7 +113,7 @@ export function ChatPage() {
     });
 
     socket.on('message_history', (data: { conversationId: string, messages: any[] }) => {
-        if (data.conversationId === convId) {
+        if (data.conversationId.toLowerCase() === (convId || '').toLowerCase()) {
             const formattedMessages = data.messages.map(m => ({
                 id: m.id?.toString() || Math.random().toString(),
                 sender: (m.sender_address || m.senderAddress || '') === user.address ? 'me' : 'other',
@@ -126,7 +126,7 @@ export function ChatPage() {
 
     socket.on('message_received', (data: { message: any }) => {
         const msg = data.message;
-        if (msg.conversationId === convId) {
+        if (msg.conversationId.toLowerCase() === (convId || '').toLowerCase()) {
             setMessages(prev => {
                 if (prev.some(m => m.id === msg.id)) return prev;
                 return [...prev, {
@@ -151,14 +151,9 @@ export function ChatPage() {
     const text = newMessage;
     setNewMessage('');
 
-    // Optimistic update
-    const optimisticId = `opt_${Date.now()}`;
-    setMessages(prev => [...prev, {
-        id: optimisticId,
-        sender: 'me',
-        content: text,
-        timestamp: Date.now()
-    }]);
+    // Optimistic update removed to prevent duplicates with server echo
+    // The server confirms via 'message_sent' or broadcasts 'message_received'
+    // We rely on the broadcast to add the message with the correct ID
 
     socketRef.current.emit('send_message', {
         conversationId,

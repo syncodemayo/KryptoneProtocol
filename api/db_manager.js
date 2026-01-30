@@ -267,7 +267,7 @@ class DatabaseManager {
   getAllSellers() {
     try {
       console.log('Executing getAllSellers query...');
-      const sellers = this.db.prepare("SELECT * FROM wallets WHERE user_type = 'Seller' OR user_type = 'seller'").all();
+      const sellers = this.db.prepare("SELECT * FROM wallets WHERE LOWER(user_type) = 'seller'").all();
       
       // Get trade statistics for all sellers
       const tradeStats = this.db.prepare(`
@@ -453,7 +453,7 @@ class DatabaseManager {
 
   getConversation(conversationId) {
     try {
-      const stmt = this.db.prepare('SELECT * FROM conversations WHERE conversation_id = ?');
+      const stmt = this.db.prepare('SELECT * FROM conversations WHERE LOWER(conversation_id) = LOWER(?)');
       return stmt.get(conversationId) || null;
     } catch (error) {
       console.error('Error getting conversation:', error);
@@ -482,7 +482,7 @@ class DatabaseManager {
         UPDATE conversations SET 
           last_message_at = CURRENT_TIMESTAMP,
           last_message_text = ?
-        WHERE conversation_id = ?
+        WHERE LOWER(conversation_id) = LOWER(?)
       `);
       stmt.run(lastMessageText, conversationId);
       return true;
@@ -521,7 +521,7 @@ class DatabaseManager {
     try {
       const stmt = this.db.prepare(`
         SELECT * FROM messages 
-        WHERE conversation_id = ?
+        WHERE LOWER(conversation_id) = LOWER(?)
         ORDER BY created_at DESC
         LIMIT ? OFFSET ?
       `);
@@ -595,6 +595,20 @@ class DatabaseManager {
       return true;
     } catch (error) {
       console.error('Error updating trade status:', error);
+      return false;
+    }
+  }
+
+  updateTradeConversation(tradeId, conversationId) {
+    try {
+      const stmt = this.db.prepare(`
+        UPDATE trades SET conversation_id = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE trade_id = ?
+      `);
+      stmt.run(conversationId, tradeId);
+      return true;
+    } catch (error) {
+      console.error('Error updating trade conversation:', error);
       return false;
     }
   }
@@ -763,7 +777,8 @@ class DatabaseManager {
   isSeller(solanaAddress) {
     try {
       const wallet = this.getWallet(solanaAddress);
-      return wallet?.userType === 'Seller';
+      const ut = wallet?.userType || '';
+      return ut.toLowerCase() === 'seller';
     } catch {
       return false;
     }
