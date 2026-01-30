@@ -113,7 +113,7 @@ export function ChatPage() {
     });
 
     socket.on('message_history', (data: { conversationId: string, messages: any[] }) => {
-        if (data.conversationId === convId) {
+        if (data.conversationId.toLowerCase() === (convId || '').toLowerCase()) {
             const formattedMessages = data.messages.map(m => ({
                 id: m.id?.toString() || Math.random().toString(),
                 sender: (m.sender_address || m.senderAddress || '') === user.address ? 'me' : 'other',

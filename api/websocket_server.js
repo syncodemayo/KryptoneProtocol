@@ -108,7 +108,9 @@ class WebSocketServer {
                   if (me === p0 || me === p1) {
                       // Valid direct chat format and user is a participant
                       // We allow joining this "potential" room
-                      conversation = { conversation_id: `${p0}_${p1}` }; // Temporary object for room name
+                      // IMPORTANT: Normalize the room ID by sorting, just like MessageManager
+                      const sortedAddresses = [p0, p1].sort();
+                      conversation = { conversation_id: `${sortedAddresses[0]}_${sortedAddresses[1]}` }; 
                   } else {
                      socket.emit('error', { message: 'Access denied to this conversation' });
                      return;
@@ -275,10 +277,30 @@ class WebSocketServer {
           }
 
           // Verify user can access this conversation
-          const conversation = this.db.getConversation(conversationId);
-          if (!this.messageManager.canAccessConversation(conversation, solanaAddress)) {
-            socket.emit('error', { message: 'Access denied to this conversation' });
-            return;
+          let conversation = this.db.getConversation(conversationId);
+          
+          if (!conversation) {
+               // Check for direct chat format
+               const parts = conversationId.split('_');
+               if (parts.length === 2 && !conversationId.startsWith('trade_')) {
+                   const p0 = parts[0].toLowerCase();
+                   const p1 = parts[1].toLowerCase();
+                   const me = solanaAddress.toLowerCase();
+                   
+                   if (me === p0 || me === p1) {
+                       // Valid direct chat, user is participant
+                       // Allow access (returns empty history if not found later)
+                   } else {
+                       socket.emit('error', { message: 'Access denied to this conversation' });
+                       return;
+                   }
+               } else {
+                   socket.emit('error', { message: 'Conversation not found' });
+                   return;
+               }
+          } else if (!this.messageManager.canAccessConversation(conversation, solanaAddress)) {
+              socket.emit('error', { message: 'Access denied to this conversation' });
+              return;
           }
 
           const messages = this.messageManager.getMessageHistory(conversationId, limit, offset);
