@@ -56,7 +56,7 @@ jobs:
             echo "Creating production environment file..."
             for var in NODE_ENV PORT \
                       ENCRYPTION_KEY_JS JWT_SECRET \
-                      ADMIN_MASTER_KEY ADMIN_ADDRESSES \
+                      ADMIN_MASTER_KEY ADMIN_ADDRESSES TREASURY_WALLET \
                       ALCHEMY_RPC_URL USDC_MINT PAYMENT_WALLET_ADDRESS; do
 
               prefixed_var="PROD_${var}"
@@ -127,7 +127,7 @@ jobs:
             echo "Creating development environment file..."
             for var in NODE_ENV PORT \
                       ENCRYPTION_KEY_JS JWT_SECRET \
-                      ADMIN_MASTER_KEY ADMIN_ADDRESSES \
+                      ADMIN_MASTER_KEY ADMIN_ADDRESSES TREASURY_WALLET \
                       ALCHEMY_RPC_URL USDC_MINT PAYMENT_WALLET_ADDRESS; do
 
               prefixed_var="DEV_${var}"
