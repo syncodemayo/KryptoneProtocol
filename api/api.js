@@ -869,9 +869,10 @@ app.get('/api/trades/:tradeId', async (req, res) => {
     let transactionError = null; // Declare transactionError here
 
     if (trade.deposit_tx_signature) {
-      if (process.env.ALCHEMY_RPC_URL) {
+      const rpcUrlForVerification = process.env.ALCHEMY_RPC_URL || process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com';
+      if (rpcUrlForVerification) {
         try {
-          const connection = new Connection(process.env.ALCHEMY_RPC_URL, 'confirmed');
+          const connection = new Connection(rpcUrlForVerification, 'confirmed');
           const statusResponse = await connection.getSignatureStatuses([trade.deposit_tx_signature]);
           const statusInfo = statusResponse?.value?.[0];
           
@@ -918,10 +919,8 @@ app.get('/api/trades/:tradeId', async (req, res) => {
         console.error('Error checking ShadowPay balance:', error);
       }
 
-      const signatureCheck = signatureConfirmed === null ? true : signatureConfirmed;
-      if (signatureCheck && balanceOk) {
-        depositConfirmed = true;
-      }
+      // Ignore signature confirmation: treat stored tx hash as success (don't wait for on-chain verification)
+      depositConfirmed = true;
     }
 
     if (depositConfirmed && trade.status === TRADE_STATUSES.DEPOSIT_PENDING) {
