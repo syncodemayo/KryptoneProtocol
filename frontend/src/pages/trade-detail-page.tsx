@@ -273,13 +273,18 @@ export function TradeDetailPage() {
       // Sign and Send
       const signature = await sendTransaction(transaction, connection);
       
-      // Submit signature to backend immediately so we track it even if frontend monitoring times out
+      // Submit signature to backend immediately; treat tx hash as success
       await handleDepositSignature(signature);
 
-      toast.info('Transaction sent! Waiting for confirmation...');
-      
-      // Optional: Wait for confirmation (Backend also checks, but good for UI)
-      await connection.confirmTransaction(signature, 'confirmed');
+      toast.success('Deposit transaction submitted. Verification may take a moment.');
+      fetchTrade();
+
+      // Wait for confirmation in background; do not fail flow on timeout (backend verifies on GET trade)
+      try {
+        await connection.confirmTransaction(signature, 'confirmed');
+      } catch (_confirmError) {
+        // Ignore confirmation timeout; tx may still succeed (backend will verify)
+      }
     } catch (error: any) {
       console.error('Accept flow error:', error);
       toast.error(error.message || 'Transaction failed');
@@ -543,7 +548,7 @@ export function TradeDetailPage() {
                 </div>
               )}
 
-              {trade.status === 'DEPOSIT_PENDING' && (
+              {trade.status === 'DEPOSIT_PENDING' && isBuyer && (
               <div className="space-y-4">
                 {trade.depositTxSignature && !verificationError ? (
                     <div className="flex items-center gap-2 text-yellow-500 bg-yellow-500/10 p-3 rounded-lg border border-yellow-500/20">
@@ -573,6 +578,25 @@ export function TradeDetailPage() {
                   <RefreshCw className={`w-4 h-4 mr-2 ${isActionLoading ? 'animate-spin' : ''}`} />
                   Retry Deposit
                 </Button>
+              </div>
+            )}
+
+              {trade.status === 'DEPOSIT_PENDING' && isSeller && (
+              <div className="space-y-4">
+                {trade.depositTxSignature ? (
+                    <div className="flex items-center gap-2 text-yellow-500 bg-yellow-500/10 p-3 rounded-lg border border-yellow-500/20">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-500"></div>
+                    <span>Deposit submitted. Verifying... (status from server)</span>
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-2 text-blue-500 bg-blue-500/10 p-3 rounded-lg border border-blue-500/20">
+                    <AlertCircle className="w-4 h-4" />
+                    <span>Waiting for buyer to submit deposit.</span>
+                    </div>
+                )}
+                <p className="text-xs text-white/70 text-center">
+                  Status is updated when you refresh or when the page refetches. Backend verifies deposit signature and balance via GET /api/trades/:tradeId.
+                </p>
               </div>
             )}
 
