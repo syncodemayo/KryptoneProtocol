@@ -715,7 +715,8 @@ app.post('/api/trades/:tradeId/accept', async (req, res) => {
       return res.status(403).json({ error: 'Only the buyer can accept this trade.' });
     }
 
-    if (trade.status !== TRADE_STATUSES.PENDING) {
+    // Allow retrying if already in DEPOSIT_PENDING (e.g. invalid tx or user retry)
+    if (trade.status !== TRADE_STATUSES.PENDING && trade.status !== TRADE_STATUSES.DEPOSIT_PENDING) {
       return res.status(400).json({ error: `Trade is not pending (current: ${trade.status}).` });
     }
 
@@ -734,7 +735,9 @@ app.post('/api/trades/:tradeId/accept', async (req, res) => {
     // Defaulting to devnet for testing safety or strict mainnet if prod.
     // Based on user context, looks like `localhost:5173` so maybe devnet.
     // Let's use a standard RPC connection.
-    const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
+    // Connect to Solana
+    const rpcUrl = process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com';
+    const connection = new Connection(rpcUrl, 'confirmed');
     
     const { blockhash } = await connection.getLatestBlockhash();
     
@@ -757,7 +760,8 @@ app.post('/api/trades/:tradeId/accept', async (req, res) => {
         verifySignatures: false
     });
     
-    const base64Transaction = serializedTransaction.toString('base64');
+    // Ensure it's a Buffer before toString('base64')
+    const base64Transaction = Buffer.from(serializedTransaction).toString('base64');
     // ----------------------------------
 
     db.updateTradeStatus(tradeId, TRADE_STATUSES.DEPOSIT_PENDING);
@@ -770,7 +774,7 @@ app.post('/api/trades/:tradeId/accept', async (req, res) => {
     });
   } catch (error) {
     console.error('Error accepting trade:', error);
-    res.status(500).json({ error: 'Failed to accept trade.' });
+    res.status(500).json({ error: 'Failed to accept trade. ' + error.message });
   }
 });
 
@@ -864,6 +868,7 @@ app.get('/api/trades/:tradeId', async (req, res) => {
     let depositConfirmed = false;
     let signatureConfirmed = null;
     let balanceOk = null;
+    let transactionError = null; // Declare transactionError here
 
     if (trade.deposit_tx_signature) {
       if (process.env.ALCHEMY_RPC_URL) {
@@ -871,11 +876,36 @@ app.get('/api/trades/:tradeId', async (req, res) => {
           const connection = new Connection(process.env.ALCHEMY_RPC_URL, 'confirmed');
           const statusResponse = await connection.getSignatureStatuses([trade.deposit_tx_signature]);
           const statusInfo = statusResponse?.value?.[0];
-          signatureConfirmed = !!statusInfo && !statusInfo.err;
-        } catch (error) {
-          console.error('Error checking deposit signature status:', error);
+          
+        // Check if confirmed (no error and status is finalized or confirmed)
+        if (statusInfo) {
+            if (statusInfo.err) {
+                transactionError = 'Transaction failed on-chain: ' + JSON.stringify(statusInfo.err);
+                console.error(`[TradeVerification] Transaction ${trade.deposit_tx_signature} failed:`, statusInfo.err);
+            } else {
+                signatureConfirmed = (statusInfo.confirmationStatus === 'confirmed' || statusInfo.confirmationStatus === 'finalized');
+            }
+        } else {
+            console.log(`[TradeVerification] Signature ${trade.deposit_tx_signature} not found on-chain.`);
+            // If the transaction is not found and it's been more than 30 seconds since update, assume dropped/expired.
+            const lastUpdated = new Date(trade.updated_at).getTime();
+            const now = Date.now();
+            if (now - lastUpdated > 30000) {
+                 // transactionError = 'Transaction not found on-chain (expired or dropped). Please retry.';
+                 // User requested to reset to "Transaction created" state instead of showing error.
+                 // We do this by clearing the signature from the DB.
+                 console.log(`[TradeVerification] Transaction ${trade.deposit_tx_signature} expired. Resetting state.`);
+                 transactionError = null; 
+                 db.setTradeDepositSignature(trade.trade_id, null);
+                 // We also need to make sure the response reflects this immediately
+                 trade.deposit_tx_signature = null;
+            }
         }
+        console.log(`[TradeVerification] Signature Status for ${trade.deposit_tx_signature}:`, statusInfo);
+      } catch (error) {
+        console.error('Error checking deposit signature status:', error);
       }
+  }
 
       try {
         const balanceResponse = await fetch(
