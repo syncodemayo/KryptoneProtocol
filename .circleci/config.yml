@@ -55,7 +55,7 @@ jobs:
             # Create environment file with production variables
             echo "Creating production environment file..."
             for var in NODE_ENV PORT \
-                      ENCRYPTION_KEY_JS JWT_SECRET \
+                      ENCRYPTION_KEY_JS JWT_SECRET SOLANA_RPC_URL \
                       ADMIN_MASTER_KEY ADMIN_ADDRESSES TREASURY_WALLET \
                       ALCHEMY_RPC_URL USDC_MINT PAYMENT_WALLET_ADDRESS; do
 
@@ -126,7 +126,7 @@ jobs:
             # Create environment file with development variables
             echo "Creating development environment file..."
             for var in NODE_ENV PORT \
-                      ENCRYPTION_KEY_JS JWT_SECRET \
+                      ENCRYPTION_KEY_JS JWT_SECRET SOLANA_RPC_URL \
                       ADMIN_MASTER_KEY ADMIN_ADDRESSES TREASURY_WALLET \
                       ALCHEMY_RPC_URL USDC_MINT PAYMENT_WALLET_ADDRESS; do
 
