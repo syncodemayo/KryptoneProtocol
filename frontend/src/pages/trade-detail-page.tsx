@@ -246,6 +246,9 @@ export function TradeDetailPage() {
           throw new Error('No transaction returned from backend');
       }
 
+      // Log unsigned transaction (base64 from backend)
+      console.log('[Deposit] Unsigned transaction (base64):', data.transaction);
+
       // Deserialize transaction
       // Use browser-compatible base64 decoding
       const binaryString = atob(data.transaction);
@@ -263,6 +266,9 @@ export function TradeDetailPage() {
           console.warn('Failed to deserialize versioned transaction, trying legacy', e);
           transaction = Transaction.from(txBuffer);
       }
+
+      // Log deserialized unsigned transaction for inspection
+      console.log('[Deposit] Unsigned transaction (deserialized):', transaction);
       
       // Sign and Send
       const signature = await sendTransaction(transaction, connection);
