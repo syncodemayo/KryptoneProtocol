@@ -21,6 +21,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+// ShadowPay SDK types
+declare global {
+  interface Window {
+    ShadowPayClient: any;
+  }
+}
+
 interface Trade {
   tradeId: string;
   itemName: string;
@@ -295,25 +302,42 @@ export function TradeDetailPage() {
   };
 
   const handleSettle = async () => {
+    if (!trade || !id) return;
     setIsActionLoading(true);
     try {
       // 1. Generate ZK Proof (Client-side)
       toast.info('Generating ZK proof for private settlement...');
       
-      // Simulate proof generation delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      if (typeof window.ShadowPayClient === 'undefined') {
+        throw new Error('ShadowPay SDK not loaded. Please refresh the page.');
+      }
 
-      const mockSettleData = {
-        paymentHeader: "BASE64_SIMULATED_PROOF",
-        resource: `Settle trade ${id}`,
+      const shadowpay = new window.ShadowPayClient();
+      await shadowpay.init();
+
+      // Convert price to lamports if needed, but SDK might handle it.
+      // Based on research, it expects lamports or a number.
+      const lamports = Math.round(trade.priceInSol * 1_000_000_000);
+
+      const payment = await shadowpay.generatePayment({
+        amount: lamports,
+        recipient: trade.sellerAddress,
+        resource: id
+      });
+
+      const paymentHeader = shadowpay.encodePayment(payment);
+
+      const settleData = {
+        paymentHeader,
+        resource: id, // Backend expects resource to match
         paymentRequirements: {
           scheme: "zkproof",
           network: "solana-mainnet",
-          maxAmountRequired: trade?.priceInSol.toString(),
+          maxAmountRequired: trade.priceInSol.toString(),
           resource: "Trade settlement",
-          description: `Payment for ${trade?.itemName}`,
+          description: `Payment for ${trade.itemName}`,
           mimeType: "application/json",
-          payTo: trade?.sellerAddress,
+          payTo: trade.sellerAddress,
           maxTimeoutSeconds: 300
         }
       };
@@ -324,7 +348,7 @@ export function TradeDetailPage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('shadowpay_token')}`
         },
-        body: JSON.stringify(mockSettleData)
+        body: JSON.stringify(settleData)
       });
 
       if (!response.ok) {
@@ -335,6 +359,7 @@ export function TradeDetailPage() {
       toast.success('Trade settled successfully! Funds released privately.');
       fetchTrade();
     } catch (error: any) {
+      console.error('Settlement Error:', error);
       toast.error(error.message);
     } finally {
       setIsActionLoading(false);
