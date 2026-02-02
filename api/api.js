@@ -607,7 +607,7 @@ app.get('/api/trades', async (req, res) => {
   }
 });
 
-// Create a trade (initiated by either Seller or Buyer)
+// Create a trade (only Sellers can create; Buyers accept or reject)
 app.post('/api/trades', async (req, res) => {
   try {
     const { itemName, description, priceInSol, buyerWallet, sellerAddress, conversationId } = req.body;
@@ -629,14 +629,12 @@ app.post('/api/trades', async (req, res) => {
     let finalSellerAddress, finalBuyerAddress;
 
     if (sellerAddress) {
-      // Initiator is likely the Buyer
-      finalBuyerAddress = initiatorAddress;
-      finalSellerAddress = sellerAddress;
-
-      if (!db.isSeller(finalSellerAddress)) {
-        return res.status(400).json({ error: 'Recipient must be a registered Seller.' });
-      }
-    } else if (buyerWallet) {
+      // Buyer-initiated flow: only sellers can create trades
+      return res.status(403).json({
+        error: 'Only sellers can create trades. Buyers can accept or reject trades proposed by the seller.',
+      });
+    }
+    if (buyerWallet) {
       // Initiator is the Seller
       finalSellerAddress = initiatorAddress;
       finalBuyerAddress = buyerWallet;

@@ -59,7 +59,7 @@ export function ChatPage() {
                 itemName: tradeData.name,
                 priceInSol: parseFloat(tradeData.price),
                 description: tradeData.description,
-                sellerAddress: id // The chat partner is the seller
+                buyerWallet: id // Seller creates trade; chat partner is the buyer
             })
         });
 
@@ -191,7 +191,7 @@ export function ChatPage() {
                 <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
             </div>
             
-            {user?.type === 'buyer' && (
+            {user?.type === 'seller' && (
                 <Button 
                     onClick={() => setShowCreateTrade(true)} 
                     className="w-full mt-4 bg-white text-black hover:bg-white/90"
@@ -244,9 +244,9 @@ export function ChatPage() {
       <Dialog open={showCreateTrade} onOpenChange={setShowCreateTrade}>
         <DialogContent className="bg-[#0f172a] border-white/10 text-white sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle className="text-white">Start New Trade</DialogTitle>
+            <DialogTitle className="text-white">Create trade</DialogTitle>
             <DialogDescription className="text-white/70">
-              Propose a secure trade to start chatting with this seller.
+              Set item, price, and description. The buyer can accept and deposit, or reject.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">

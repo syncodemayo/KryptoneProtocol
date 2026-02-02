@@ -30,7 +30,10 @@ export function TradeModal({ isOpen, onClose, otherPartyAddress, onTradeCreated 
   const [priceInSol, setPriceInSol] = useState('');
   const [description, setDescription] = useState('');
 
+  const isSeller = user?.type === 'seller';
+
   const handleCreateTrade = async () => {
+    if (!isSeller) return;
     if (!itemName || !priceInSol) {
       toast.error('Item name and price are required');
       return;
@@ -39,18 +42,12 @@ export function TradeModal({ isOpen, onClose, otherPartyAddress, onTradeCreated 
     setLoading(true);
     try {
       const token = localStorage.getItem('shadowpay_token');
-      
-      const payload: any = {
+      const payload = {
         itemName,
         description,
         priceInSol,
+        buyerWallet: otherPartyAddress,
       };
-
-      if (user?.type === 'seller') {
-          payload.buyerWallet = otherPartyAddress;
-      } else {
-          payload.sellerAddress = otherPartyAddress;
-      }
 
       const response = await fetch(`${API_BASE_URL}/api/trades`, {
         method: 'POST',
@@ -93,6 +90,7 @@ export function TradeModal({ isOpen, onClose, otherPartyAddress, onTradeCreated 
             Create an escrow-protected trade. The funds will be held securely until you confirm receipt.
           </DialogDescription>
         </DialogHeader>
+        {isSeller ? (
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
             <Label htmlFor="itemName">Item Name</Label>
@@ -127,11 +125,14 @@ export function TradeModal({ isOpen, onClose, otherPartyAddress, onTradeCreated 
             />
           </div>
         </div>
+        ) : (
+          <p className="py-4 text-muted-foreground">Only sellers can create trades.</p>
+        )}
         <DialogFooter>
           <Button variant="ghost" onClick={onClose} disabled={loading} className="text-white hover:bg-white/10">
             Cancel
           </Button>
-          <Button onClick={handleCreateTrade} disabled={loading} className="bg-green-600 hover:bg-green-700 text-white">
+          <Button onClick={handleCreateTrade} disabled={loading || !isSeller} className="bg-green-600 hover:bg-green-700 text-white">
             {loading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
