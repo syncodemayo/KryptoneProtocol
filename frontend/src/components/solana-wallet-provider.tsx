@@ -20,7 +20,8 @@ interface SolanaWalletProviderProps {
 
 export function SolanaWalletProvider({ children }: SolanaWalletProviderProps) {
   // The network can be set to 'devnet', 'testnet', or 'mainnet-beta'
-  const network = WalletAdapterNetwork.Mainnet;
+  // Default to Devnet for development to match backend
+  const network = WalletAdapterNetwork.Devnet;
 
   // Use custom RPC URL from environment if available, otherwise fall back to public endpoint
   const endpoint = useMemo(() => {

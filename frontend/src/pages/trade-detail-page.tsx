@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/auth-context';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
-import { VersionedTransaction } from '@solana/web3.js';
+import { VersionedTransaction, Transaction } from '@solana/web3.js';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +20,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+
+// ShadowPay SDK types
+declare global {
+  interface Window {
+    ShadowPayClient: any;
+  }
+}
 
 interface Trade {
   tradeId: string;
@@ -50,6 +57,7 @@ export function TradeDetailPage() {
   const [trade, setTrade] = useState<Trade | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
+  const [verificationError, setVerificationError] = useState<string | null>(null);
   const [showRejectConfirm, setShowRejectConfirm] = useState(false);
   
   // Chat State
@@ -203,6 +211,15 @@ export function TradeDetailPage() {
       if (!response.ok) throw new Error('Failed to fetch trade');
       const data = await response.json();
       setTrade(data.trade);
+      
+      // Check for verification error
+      if (data.paymentStatus?.transactionError) {
+          console.error('Transaction Error Detected:', data.paymentStatus.transactionError);
+          setVerificationError(data.paymentStatus.transactionError);
+          toast.error(`Verification Failed: ${data.paymentStatus.transactionError}`);
+      } else {
+          setVerificationError(null);
+      }
     } catch (error) {
       console.error('Error fetching trade:', error);
       toast.error('Failed to load trade details');
@@ -237,17 +254,26 @@ export function TradeDetailPage() {
         txBuffer[i] = binaryString.charCodeAt(i);
       }
       
-      const transaction = VersionedTransaction.deserialize(txBuffer);
+      let transaction;
+      try {
+          // Try Versioned first (standard for modern apps)
+          transaction = VersionedTransaction.deserialize(txBuffer);
+      } catch (e) {
+          // Fallback to legacy Transaction
+          console.warn('Failed to deserialize versioned transaction, trying legacy', e);
+          transaction = Transaction.from(txBuffer);
+      }
       
       // Sign and Send
       const signature = await sendTransaction(transaction, connection);
       
+      // Submit signature to backend immediately so we track it even if frontend monitoring times out
+      await handleDepositSignature(signature);
+
       toast.info('Transaction sent! Waiting for confirmation...');
       
       // Optional: Wait for confirmation (Backend also checks, but good for UI)
       await connection.confirmTransaction(signature, 'confirmed');
-
-      await handleDepositSignature(signature);
     } catch (error: any) {
       console.error('Accept flow error:', error);
       toast.error(error.message || 'Transaction failed');
@@ -276,25 +302,42 @@ export function TradeDetailPage() {
   };
 
   const handleSettle = async () => {
+    if (!trade || !id) return;
     setIsActionLoading(true);
     try {
       // 1. Generate ZK Proof (Client-side)
       toast.info('Generating ZK proof for private settlement...');
       
-      // Simulate proof generation delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      if (typeof window.ShadowPayClient === 'undefined') {
+        throw new Error('ShadowPay SDK not loaded. Please refresh the page.');
+      }
 
-      const mockSettleData = {
-        paymentHeader: "BASE64_SIMULATED_PROOF",
-        resource: `Settle trade ${id}`,
+      const shadowpay = new window.ShadowPayClient();
+      await shadowpay.init();
+
+      // Convert price to lamports if needed, but SDK might handle it.
+      // Based on research, it expects lamports or a number.
+      const lamports = Math.round(trade.priceInSol * 1_000_000_000);
+
+      const payment = await shadowpay.generatePayment({
+        amount: lamports,
+        recipient: trade.sellerAddress,
+        resource: id
+      });
+
+      const paymentHeader = shadowpay.encodePayment(payment);
+
+      const settleData = {
+        paymentHeader,
+        resource: id, // Backend expects resource to match
         paymentRequirements: {
           scheme: "zkproof",
           network: "solana-mainnet",
-          maxAmountRequired: trade?.priceInSol.toString(),
+          maxAmountRequired: trade.priceInSol.toString(),
           resource: "Trade settlement",
-          description: `Payment for ${trade?.itemName}`,
+          description: `Payment for ${trade.itemName}`,
           mimeType: "application/json",
-          payTo: trade?.sellerAddress,
+          payTo: trade.sellerAddress,
           maxTimeoutSeconds: 300
         }
       };
@@ -305,7 +348,7 @@ export function TradeDetailPage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('shadowpay_token')}`
         },
-        body: JSON.stringify(mockSettleData)
+        body: JSON.stringify(settleData)
       });
 
       if (!response.ok) {
@@ -316,6 +359,7 @@ export function TradeDetailPage() {
       toast.success('Trade settled successfully! Funds released privately.');
       fetchTrade();
     } catch (error: any) {
+      console.error('Settlement Error:', error);
       toast.error(error.message);
     } finally {
       setIsActionLoading(false);
@@ -494,13 +538,37 @@ export function TradeDetailPage() {
               )}
 
               {trade.status === 'DEPOSIT_PENDING' && (
-                <div className="pt-4">
-                  <div className="flex items-center justify-center py-4 bg-white/10 rounded-2xl animate-pulse">
-                    <RefreshCw className="w-5 h-5 mr-3 animate-spin" />
-                    <span className="text-sm font-medium">Verifying Deposit...</span>
-                  </div>
-                </div>
-              )}
+              <div className="space-y-4">
+                {trade.depositTxSignature && !verificationError ? (
+                    <div className="flex items-center gap-2 text-yellow-500 bg-yellow-500/10 p-3 rounded-lg border border-yellow-500/20">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-500"></div>
+                    <span>Verifying deposit transaction...</span>
+                    </div>
+                ) : !trade.depositTxSignature ? (
+                    <div className="flex items-center gap-2 text-blue-500 bg-blue-500/10 p-3 rounded-lg border border-blue-500/20">
+                    <AlertCircle className="w-4 h-4" />
+                    <span>Transaction created. Please confirm in your wallet.</span>
+                    </div>
+                ) : null}
+                
+                {verificationError && (
+                    <div className="text-red-500 bg-red-500/10 p-3 rounded-lg border border-red-500/20 text-sm">
+                        <p className="font-bold">Verification Failed</p>
+                        <p>{verificationError}</p>
+                    </div>
+                )}
+
+                <Button 
+                  onClick={handleAccept} 
+                  disabled={isActionLoading}
+                  variant="outline"
+                  className="w-full border-yellow-500/50 hover:bg-yellow-500/10"
+                >
+                  <RefreshCw className={`w-4 h-4 mr-2 ${isActionLoading ? 'animate-spin' : ''}`} />
+                  Retry Deposit
+                </Button>
+              </div>
+            )}
 
               {trade.status === 'SUCCESS' && (
                   <div className="pt-4 text-center">
