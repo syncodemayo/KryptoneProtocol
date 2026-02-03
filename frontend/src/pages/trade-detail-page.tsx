@@ -335,27 +335,31 @@ export function TradeDetailPage() {
         throw initErr;
       }
 
-      // Amount: use SOL number (doc: not lamports; system multiplies by 1e9)
+      const payerWallet = typeof user?.address === 'string' ? user.address.trim() : '';
+      const payee = typeof trade?.sellerAddress === 'string' ? trade.sellerAddress.trim() : '';
+      if (!payerWallet || !payee) {
+        throw new Error('Buyer or seller address missing. Refresh and try again.');
+      }
       const amountSol = Number(trade.priceInSol);
+      const amountLamports = Math.round(amountSol * 1_000_000_000);
       const resourceDesc = `Escrow release for deal ${id}`;
 
-      // Generate ZK payment proof (doc: userWallet, merchantWallet, amount in SOL, resource)
+      // SDK expects lamports; use payerWallet/payee (doc) and common aliases so SDK finds expected keys
       let paymentData: unknown;
+      const paymentArgs = {
+        payerWallet,
+        payee,
+        amountLamports,
+        resource: resourceDesc,
+        userWallet: payerWallet,
+        merchantWallet: payee,
+        recipient: payee,
+        amount: amountLamports,
+      };
       if (typeof shadowpay.generatePayment === 'function') {
-        paymentData = await shadowpay.generatePayment({
-          userWallet: user.address,
-          merchantWallet: trade.sellerAddress,
-          amount: amountSol,
-          resource: resourceDesc,
-        });
+        paymentData = await shadowpay.generatePayment(paymentArgs);
       } else if (typeof shadowpay.generatePaymentProof === 'function') {
-        const lamports = Math.round(amountSol * 1_000_000_000);
-        paymentData = await shadowpay.generatePaymentProof(
-          user.address,
-          trade.sellerAddress,
-          lamports,
-          resourceDesc
-        );
+        paymentData = await shadowpay.generatePaymentProof(paymentArgs);
       } else {
         throw new Error('ShadowPay SDK: generatePayment or generatePaymentProof not found.');
       }
