@@ -568,17 +568,19 @@ export function TradeDetailPage() {
                 </div>
               )}
 
-              {trade.status === 'DEPOSIT_CONFIRMED' && isBuyer && (
+              {(trade.status === 'DEPOSIT_CONFIRMED' || trade.status === 'SETTLE_PENDING') && isBuyer && (
                 <div className="pt-4">
                   <Button 
                     onClick={handleSettle} 
                     disabled={isActionLoading}
                     className="w-full bg-white text-primary hover:bg-white/90 font-bold"
                   >
-                    Settle Privately
+                    {trade.status === 'SETTLE_PENDING' ? 'Retry Settle' : 'Settle Privately'}
                   </Button>
                   <p className="text-[10px] text-white/50 text-center mt-4">
-                    Uses ShadowPay ZK protocol to release funds privately.
+                    {trade.status === 'SETTLE_PENDING'
+                      ? 'Settlement may still be in progress or failed. You can retry.'
+                      : 'Uses ShadowPay ZK protocol to release funds privately.'}
                   </p>
                 </div>
               )}
