@@ -38,12 +38,45 @@ class AuthService {
   private token: string | null = null;
   private polygonAddress: string | null = null;
   private safeWalletAddress: string | null = null;
+  private logoutListeners: (() => void)[] = [];
 
   constructor() {
     // Load token and addresses from localStorage on initialization
     this.token = localStorage.getItem('auth_token');
     this.polygonAddress = localStorage.getItem('polygon_address');
     this.safeWalletAddress = localStorage.getItem('safe_wallet_address');
+
+    // Add interceptor for authentication errors
+    axios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response?.status === 401) {
+          console.warn('[AuthService] 401 Unauthorized detected, logging out');
+          this.logout();
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    // Monkey-patch fetch to handle 401 errors
+    if (typeof window !== 'undefined') {
+      const originalFetch = window.fetch;
+      window.fetch = async (...args) => {
+        const response = await originalFetch(...args);
+        if (response.status === 401) {
+          console.warn('[AuthService] Fetch 401 Unauthorized detected, logging out');
+          this.logout();
+        }
+        return response;
+      };
+    }
+  }
+
+  onLogout(listener: () => void) {
+    this.logoutListeners.push(listener);
+    return () => {
+      this.logoutListeners = this.logoutListeners.filter(l => l !== listener);
+    };
   }
 
   setToken(token: string | null) {
@@ -356,6 +389,9 @@ class AuthService {
     localStorage.removeItem('safe_wallet_address');
     localStorage.removeItem('shadowpay_token');
     localStorage.removeItem('shadowpay_user');
+
+    // Notify listeners
+    this.logoutListeners.forEach(listener => listener());
   }
 }
 

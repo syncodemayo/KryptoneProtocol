@@ -41,9 +41,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const storedUser = localStorage.getItem('shadowpay_user');
     const token = localStorage.getItem('shadowpay_token');
+
+    const isTokenExpired = (t: string) => {
+        try {
+            const payload = JSON.parse(atob(t.split('.')[1]));
+            if (!payload.exp) return false;
+            return payload.exp < Math.floor(Date.now() / 1000);
+        } catch (e) {
+            return true;
+        }
+    };
     
-    // Clear stale session if token is literally "null" or "undefined"
-    if (token === 'null' || token === 'undefined') {
+    // Clear stale session if token is literally "null" or "undefined" or expired
+    if (token === 'null' || token === 'undefined' || (token && isTokenExpired(token))) {
       localStorage.removeItem('shadowpay_token');
       localStorage.removeItem('auth_token');
       localStorage.removeItem('shadowpay_user');
@@ -111,6 +121,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return () => clearTimeout(timeout);
     }
   }, [publicKey, isAuthenticated, connecting]);
+
+  // Handle centralized logout notifications
+  useEffect(() => {
+    const unsubscribe = authService.onLogout(() => {
+      console.log('[AuthContext] Received logout notification from AuthService');
+      setUser(null);
+      setIsAuthenticated(false);
+      disconnect(); // Ensure wallet is disconnected if it wasn't already
+    });
+    return () => unsubscribe();
+  }, [disconnect]);
 
   // Check registration status when wallet connects
   useEffect(() => {
@@ -295,11 +316,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
-    setUser(null);
-    setIsAuthenticated(false);
     authService.logout();
-    authService.setToken(null);
-    disconnect();
     toast.success('Logged out');
   };
 
