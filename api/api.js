@@ -981,7 +981,7 @@ app.post('/api/trades/:tradeId/settle', async (req, res) => {
       return res.status(403).json({ error: 'Only the buyer can settle this trade.' });
     }
 
-    if (trade.status !== TRADE_STATUSES.DEPOSIT_CONFIRMED) {
+    if (trade.status !== TRADE_STATUSES.DEPOSIT_CONFIRMED && trade.status !== TRADE_STATUSES.SETTLE_PENDING) {
       return res.status(400).json({ error: `Trade is not ready to settle (current: ${trade.status}).` });
     }
 
