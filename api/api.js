@@ -1006,13 +1006,30 @@ app.post('/api/trades/:tradeId/settle', async (req, res) => {
       }),
     });
 
+    const responseText = await settleResponse.text();
+
     if (!settleResponse.ok) {
-      const errorText = await settleResponse.text();
-      console.error('ShadowPay settle API error:', errorText);
-      return res.status(500).json({ error: 'Failed to settle trade.' });
+      let shadowPayError = responseText;
+      try {
+        const errJson = JSON.parse(responseText);
+        shadowPayError = errJson.error || errJson.message || responseText;
+      } catch (_) {
+        // use raw text
+      }
+      console.error('ShadowPay settle API error:', responseText);
+      return res.status(500).json({
+        error: 'Settlement failed: ' + (shadowPayError || 'Unknown ShadowPay error'),
+      });
     }
 
-    const settleData = await settleResponse.json();
+    let settleData;
+    try {
+      settleData = responseText ? JSON.parse(responseText) : {};
+    } catch (parseErr) {
+      console.error('ShadowPay settle response parse error:', parseErr);
+      return res.status(500).json({ error: 'Invalid response from ShadowPay settle.' });
+    }
+
     const txSignature = settleData.txSignature || settleData.signature || null;
 
     db.setTradeSettled(tradeId, txSignature);
@@ -1026,7 +1043,10 @@ app.post('/api/trades/:tradeId/settle', async (req, res) => {
     });
   } catch (error) {
     console.error('Error settling trade:', error);
-    res.status(500).json({ error: 'Failed to settle trade.' });
+    const message = error?.message || String(error);
+    res.status(500).json({
+      error: 'Failed to settle trade.' + (message ? ' ' + message : ''),
+    });
   }
 });
 
