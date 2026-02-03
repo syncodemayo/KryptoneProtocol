@@ -313,44 +313,75 @@ export function TradeDetailPage() {
   };
 
   const handleSettle = async () => {
-    if (!trade || !id) return;
+    if (!trade || !user?.address || !id) return;
     setIsActionLoading(true);
     try {
-      // 1. Generate ZK Proof (Client-side)
       toast.info('Generating ZK proof for private settlement...');
-      
+
       if (typeof window.ShadowPayClient === 'undefined') {
         throw new Error('ShadowPay SDK not loaded. Please refresh the page.');
       }
 
-      const shadowpay = new window.ShadowPayClient();
-      await shadowpay.init();
-
-      // Convert price to lamports if needed, but SDK might handle it.
-      // Based on research, it expects lamports or a number.
-      const lamports = Math.round(trade.priceInSol * 1_000_000_000);
-
-      const payment = await shadowpay.generatePayment({
-        amount: lamports,
-        recipient: trade.sellerAddress,
-        resource: id
+      // Initialize ShadowPay client with baseUrl (doc: most up-to-date approach)
+      const shadowpay = new window.ShadowPayClient({
+        baseUrl: 'https://shadow.radr.fun/shadowpay',
       });
+      try {
+        await (shadowpay.initialize ? shadowpay.initialize() : shadowpay.init?.());
+      } catch (initErr: any) {
+        const msg = initErr?.message || String(initErr);
+        if (msg.includes('is not valid JSON') || msg.includes('<!doctype'))
+          throw new Error('ShadowPay could not load assets (got HTML). In dev, ensure Vite proxy for /shadowpay is used and restart the dev server.');
+        throw initErr;
+      }
 
-      const paymentHeader = shadowpay.encodePayment(payment);
+      // Amount: use SOL number (doc: not lamports; system multiplies by 1e9)
+      const amountSol = Number(trade.priceInSol);
+      const resourceDesc = `Escrow release for deal ${id}`;
 
+      // Generate ZK payment proof (doc: userWallet, merchantWallet, amount in SOL, resource)
+      let paymentData: unknown;
+      if (typeof shadowpay.generatePayment === 'function') {
+        paymentData = await shadowpay.generatePayment({
+          userWallet: user.address,
+          merchantWallet: trade.sellerAddress,
+          amount: amountSol,
+          resource: resourceDesc,
+        });
+      } else if (typeof shadowpay.generatePaymentProof === 'function') {
+        const lamports = Math.round(amountSol * 1_000_000_000);
+        paymentData = await shadowpay.generatePaymentProof(
+          user.address,
+          trade.sellerAddress,
+          lamports,
+          resourceDesc
+        );
+      } else {
+        throw new Error('ShadowPay SDK: generatePayment or generatePaymentProof not found.');
+      }
+
+      // paymentHeader: base64 of proof data (doc: btoa(JSON.stringify(paymentData)))
+      const paymentHeader =
+        typeof shadowpay.encodePayment === 'function'
+          ? shadowpay.encodePayment(paymentData)
+          : typeof paymentData === 'object' && paymentData !== null
+            ? btoa(JSON.stringify(paymentData))
+            : String(paymentData);
+
+      // maxAmountRequired: SOL as string (doc: e.g. "0.05")
       const settleData = {
         paymentHeader,
-        resource: id, // Backend expects resource to match
+        resource: resourceDesc,
         paymentRequirements: {
-          scheme: "zkproof",
-          network: "solana-mainnet",
+          scheme: 'zkproof',
+          network: 'solana-mainnet',
           maxAmountRequired: trade.priceInSol.toString(),
-          resource: "Trade settlement",
-          description: `Payment for ${trade.itemName}`,
-          mimeType: "application/json",
+          resource: resourceDesc,
+          description: 'Payment release after receiving goods',
+          mimeType: 'application/json',
           payTo: trade.sellerAddress,
-          maxTimeoutSeconds: 300
-        }
+          maxTimeoutSeconds: 300,
+        },
       };
 
       const response = await fetch(`${API_BASE_URL}/api/trades/${id}/settle`, {

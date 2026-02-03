@@ -17,4 +17,14 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    proxy: {
+      // ShadowPay SDK init() fetches assets/JSON from relative or same-origin URLs;
+      // proxy so those requests get the real API instead of SPA HTML.
+      '/shadowpay': {
+        target: 'https://shadow.radr.fun',
+        changeOrigin: true,
+      },
+    },
+  },
 })
