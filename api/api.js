@@ -1003,6 +1003,10 @@ app.post('/api/trades/:tradeId/settle', async (req, res) => {
         paymentHeader,
         resource,
         paymentRequirements,
+        metadata: {
+          userWallet: buyerAddress,
+          wallet: buyerAddress,
+        },
       }),
     });
 
